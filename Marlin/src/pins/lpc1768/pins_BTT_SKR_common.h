@@ -59,10 +59,10 @@
   #define TEMP_0_PIN                    P0_24_A1  // A1 (T1) - (68) - TEMP_0_PIN
 #endif
 #ifndef TEMP_1_PIN
-  #define TEMP_1_PIN                    P0_25_A2  // A2 (T2) - (69) - TEMP_1_PIN
+  #define TEMP_1_PIN                    P0_23_A2  // A2 (T2) - (69) - TEMP_1_PIN
 #endif
 #ifndef TEMP_BED_PIN
-  #define TEMP_BED_PIN                  P0_23_A0  // A0 (T0) - (67) - TEMP_BED_PIN
+  #define TEMP_BED_PIN                  P0_25_A0  // A0 (T0) - (67) - TEMP_BED_PIN
 #endif
 
 #if HOTENDS == 1 && TEMP_SENSOR_REDUNDANT_SOURCE != 1
@@ -94,11 +94,11 @@
 #endif
 #if HOTENDS == 1 && DISABLED(HEATERS_PARALLEL)
   #ifndef FAN1_PIN
-    #define FAN1_PIN                       P2_04
+    //#define FAN1_PIN                       P2_04
   #endif
 #else
   #ifndef HEATER_1_PIN
-    #define HEATER_1_PIN                   P2_04
+    //#define HEATER_1_PIN                   P2_04
   #endif
 #endif
 #ifndef FAN_PIN
@@ -207,3 +207,11 @@
   #endif
 
 #endif // BTT_MOTOR_EXPANSION
+
+// Laser K40 Pin description
+#define SPINDLE_DIR_PIN             -1              // disabled, unused
+#define SPINDLE_LASER_ENA_PIN    NEOPIXEL_PIN      // P1_24, logic level converter maybe necessary, active low
+#define SPINDLE_LASER_PWM_PIN    SERVO0_PIN       // P2_00, to K40 PWM Pin
+#define COOLANT_FLOOD_PIN        FAN_PIN         // radiator fan, 24V
+#define COOLANT_MIST_PIN         HEATER_0_PIN   // waterpump or relay, 24V
+#define AIR_EVACUATION_PIN       HEATER_BED_PIN        // attached a airassist with M10 for on and M11 for off

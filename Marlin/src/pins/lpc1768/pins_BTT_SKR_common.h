@@ -215,3 +215,4 @@
 #define COOLANT_FLOOD_PIN        FAN_PIN         // radiator fan, 24V
 #define COOLANT_MIST_PIN         HEATER_0_PIN   // waterpump or relay, 24V
 #define AIR_EVACUATION_PIN       HEATER_BED_PIN        // attached a airassist with M10 for on and M11 for off
+#define AIR_ASSIST_PIN            -1

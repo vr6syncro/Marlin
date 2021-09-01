@@ -45,7 +45,7 @@
   #endif
 #else
   #define X_MIN_PIN                        P1_29  // X-
-  #define X_MAX_PIN                        P1_28  // X+
+  #define X_MAX_PIN                        P1_29  // X+
 #endif
 
 #ifdef Y_STALL_SENSITIVITY
@@ -56,8 +56,8 @@
     #define Y_MIN_PIN                      P1_26  // Y+
   #endif
 #else
-  #define Y_MIN_PIN                        P1_27  // Y-
-  #define Y_MAX_PIN                        P1_26  // Y+
+  #define Y_MIN_PIN                        P1_28  // Y-
+  #define Y_MAX_PIN                        P1_28  // Y+
 #endif
 
 #ifdef Z_STALL_SENSITIVITY
@@ -68,8 +68,8 @@
     #define Z_MIN_PIN                      P1_24  // Z+
   #endif
 #else
-  #define Z_MIN_PIN                        P1_25  // Z-
-  #define Z_MAX_PIN                        P1_24  // Z+
+  #define Z_MIN_PIN                        P1_27  // Z-
+  #define Z_MAX_PIN                        P1_27  // Z+
 #endif
 
 #define ONBOARD_ENDSTOPPULLUPS                    // Board has built-in pullups

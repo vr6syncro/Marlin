@@ -248,11 +248,11 @@ xyze_int8_t Stepper::count_direction{0};
     .enabled = false,
     .cur_power = 0,
     .cruise_set = false,
-    #if DISABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
+    #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
+      .till_update = 0
+    #else
       .last_step_count = 0,
       .acc_step_count = 0
-    #else
-      .till_update = 0
     #endif
   };
 #endif
@@ -2004,10 +2004,9 @@ uint32_t Stepper::block_phase_isr() {
               }
             #endif
           }
-        #endif
+        #endif // LASER_POWER_INLINE_TRAPEZOID
       }
-      // Must be in cruise phase otherwise
-      else {
+      else {  // Must be in cruise phase otherwise
 
         #if ENABLED(LIN_ADVANCE)
           // If there are any esteps, fire the next advance_isr "now"

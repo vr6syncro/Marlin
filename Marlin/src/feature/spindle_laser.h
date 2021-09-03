@@ -45,7 +45,6 @@
   #define SPEED_POWER_INTERCEPT 0
 #endif
 
-// #define _MAP(N,S1,S2,D1,D2) ((N)*_MAX((D2)-(D1),0)/_MAX((S2)-(S1),1)+(D1))
 
 class SpindleLaser {
 public:
@@ -95,7 +94,7 @@ public:
   static const cutter_power_t mpower_max() { return cpwr_to_upwr(SPEED_POWER_MAX); }
 
   #if ENABLED(LASER_FEATURE)
-    static cutter_test_pulse_t testPulse; // Test fire Pulse ms value
+    static cutter_test_pulse_t testPulse;                 // (ms) Test fire pulse duration
   #endif
 
   static bool isReady;                    // Ready to apply power setting from the UI to OCR
@@ -188,10 +187,9 @@ public:
     }
   #endif // SPINDLE_LASER_PWM
 
-  /**
-   * Enable/Disable spindle/laser
-   * @param enable true = enable; false = disable
-   */
+  // Enable laser/spindle output.
+  // If we are in standard mode and no power was spec'd set it to the startup value.
+  // With any inline mode set the power to the current one from the last cutter.power value.
   static inline void set_enabled(const bool enable) {
     uint8_t value = 0;
     if (enable) {
@@ -209,11 +207,7 @@ public:
 
   static inline void disable() { isReady = false; set_enabled(false); }
 
-  /**
-   * Wait for spindle to spin up or spin down
-   *
-   * @param on true = state to on; false = state to off.
-   */
+  // Wait for spindle/laser to startup or shutdown
   static inline void power_delay(const bool on) {
     #if DISABLED(LASER_POWER_INLINE)
       safe_delay(on ? SPINDLE_LASER_POWERUP_DELAY : SPINDLE_LASER_POWERDOWN_DELAY);
@@ -277,9 +271,9 @@ public:
        */
       static inline void test_fire_pulse() {
         TERN_(USE_BEEPER, buzzer.tone(30, 3000));
-        enable_forward();                  // Turn Laser on (Spindle speak but same funct)
+        enable_forward();                  // Laser on (Spindle speak but same funct)
         delay(testPulse);                  // Delay for time set by user in pulse ms menu screen.
-        disable();                         // Turn laser off
+        disable();                         // Laser off
       }
     #endif
 

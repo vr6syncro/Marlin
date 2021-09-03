@@ -39,13 +39,15 @@
 #endif
 
 SpindleLaser cutter;
-uint8_t SpindleLaser::power;
+uint8_t SpindleLaser::power = 0;
+
 #if ENABLED(LASER_FEATURE)
-  cutter_test_pulse_t SpindleLaser::testPulse = 50;                   // Test fire Pulse time ms value.
+  cutter_test_pulse_t SpindleLaser::testPulse = 50;                   // (ms) Test fire pulse default duration
 #endif
-bool SpindleLaser::isReady;                                           // Ready to apply power setting from the UI to OCR
-cutter_power_t SpindleLaser::menuPower,                               // Power set via LCD menu in PWM, PERCENT, or RPM
-               SpindleLaser::unitPower;                               // LCD status power in PWM, PERCENT, or RPM
+
+bool SpindleLaser::isReady = false;                                   // Ready to apply power setting from the UI to OCR
+cutter_power_t SpindleLaser::menuPower = 0,                           // Power set via LCD menu in PWM, PERCENT, or RPM
+               SpindleLaser::unitPower = 0;                           // LCD status power in PWM, PERCENT, or RPM
 
 #if ENABLED(MARLIN_DEV_MODE)
   cutter_frequency_t SpindleLaser::frequency;                         // PWM frequency setting; range: 2K - 50K
@@ -117,7 +119,7 @@ void SpindleLaser::init() {
  * @param opwr Power value. Range 0 to MAX. When 0 disable spindle/laser.
  */
 void SpindleLaser::apply_power(const uint8_t opwr) {
-  static uint8_t last_power_applied = 0;
+  static uint8_t last_power_applied = 0; // Power state tracking
   if (opwr == last_power_applied) return;
   last_power_applied = opwr;
   power = opwr;

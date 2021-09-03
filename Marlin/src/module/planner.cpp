@@ -132,7 +132,7 @@ uint8_t Planner::delay_before_delivering;       // This counter delays delivery 
 
 planner_settings_t Planner::settings;           // Initialized by settings.load()
 
-#if ENABLED(LASER_POWER_INLINE)
+#if ENABLED(LASER_FEATURE)
   laser_state_t Planner::laser_inline;          // Current state for blocks
 #endif
 
@@ -848,35 +848,37 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
    * Note this may behave unreliably when running with S_CURVE_ACCELERATION
    */
   #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-    if (block->laser.power > 0) { // No need to care if power == 0
-      const uint8_t entry_power = block->laser.power * entry_factor; // Power on block entry
-      #if DISABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-        // Speedup power
-        const uint8_t entry_power_diff = block->laser.power - entry_power;
-        if (entry_power_diff) {
-          block->laser.entry_per = accelerate_steps / entry_power_diff;
+    if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
+      if (block->laser.power > 0) { // No need to care if power == 0
+        const uint8_t entry_power = block->laser.power * entry_factor; // Power on block entry
+        #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
           block->laser.power_entry = entry_power;
-        }
-        else {
-          block->laser.entry_per = 0;
-          block->laser.power_entry = block->laser.power;
-        }
-        // Slowdown power
-        const uint8_t exit_power = block->laser.power * exit_factor, // Power on block entry
-                      exit_power_diff = block->laser.power - exit_power;
-        if (exit_power_diff) {
-          block->laser.exit_per = (block->step_event_count - block->decelerate_after) / exit_power_diff;
-          block->laser.power_exit = exit_power;
-        }
-        else {
-          block->laser.exit_per = 0;
-          block->laser.power_exit = block->laser.power;
-        }
-      #else
-        block->laser.power_entry = entry_power;
-      #endif
+        #else
+          // Speedup power
+          const uint8_t entry_power_diff = block->laser.power - entry_power;
+          if (entry_power_diff) {
+            block->laser.entry_per = accelerate_steps / entry_power_diff;
+            block->laser.power_entry = entry_power;
+          }
+          else {
+            block->laser.entry_per = 0;
+            block->laser.power_entry = block->laser.power;
+          }
+          // Slowdown power
+          const uint8_t exit_power = block->laser.power * exit_factor, // Power on block entry
+                        exit_power_diff = block->laser.power - exit_power;
+          if (exit_power_diff) {
+            block->laser.exit_per = (block->step_event_count - block->decelerate_after) / exit_power_diff;
+            block->laser.power_exit = exit_power;
+          }
+          else {
+            block->laser.exit_per = 0;
+            block->laser.power_exit = block->laser.power;
+          }
+        #endif // !LASER_POWER_INLINE_TRAPEZOID_CONT
+      }
     }
-  #endif
+  #endif // LASER_POWER_INLINE_TRAPEZOID
 }
 
 /*                            PLANNER SPEED DEFINITION
@@ -1977,10 +1979,20 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
   block->direction_bits = dm;
 
   // Update block laser power
-  #if ENABLED(LASER_POWER_INLINE)
-    laser_inline.status.isPlanned = true;
-    block->laser.status = laser_inline.status;
-    block->laser.power = laser_inline.power;
+  #if HAS_CUTTER
+    if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
+      block->cutter_power = cutter.power;
+  #endif
+
+  #if ENABLED(LASER_FEATURE)
+    if (cutter.cutter_mode != CUTTER_MODE_STANDARD) {
+      block->laser.power = laser_inline.power;
+      block->laser.status = laser_inline.status;
+      if (cutter.cutter_mode == CUTTER_MODE_DYNAMIC && cutter.laser_feedrate_changed()) { // Only process changes in rate
+        laser_inline.power = cutter.calc_dynamic_power();
+        block->laser.power = laser_inline.power;
+      }
+    }
   #endif
 
   // Number of steps for each axis
@@ -2133,7 +2145,6 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
 
   TERN_(MIXING_EXTRUDER, mixer.populate_block(block->b_color));
 
-  TERN_(HAS_CUTTER, block->cutter_power = cutter.power);
 
   #if HAS_FAN
     FANS_LOOP(i) block->fan_speed[i] = thermalManager.fan_speed[i];

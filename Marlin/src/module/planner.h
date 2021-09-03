@@ -126,12 +126,12 @@ enum BlockFlag : char {
 
 #define BLOCK_MASK_SYNC ( BLOCK_FLAG_SYNC_POSITION | TERN0(LASER_SYNCHRONOUS_M106_M107, BLOCK_FLAG_SYNC_FANS) )
 
-#if ENABLED(LASER_POWER_INLINE)
+#if ENABLED(LASER_FEATURE)
 
   typedef struct {
-    bool isPlanned:1;
-    bool isEnabled:1;
+    bool isEnabled:1;         // Set to engage the inline laser power output.
     bool dir:1;
+    bool isPowered:1;         // Set on any parsed G1, G2, G3, or G5 powered move, cleared on G0 and G28.
     bool Reserved:6;
   } power_status_t;
 
@@ -240,7 +240,7 @@ typedef struct block_t {
     uint32_t sdpos;
   #endif
 
-  #if ENABLED(LASER_POWER_INLINE)
+  #if ENABLED(LASER_FEATURE)
     block_laser_t laser;
   #endif
 
@@ -252,7 +252,7 @@ typedef struct block_t {
 
 #define BLOCK_MOD(n) ((n)&(BLOCK_BUFFER_SIZE-1))
 
-#if ENABLED(LASER_POWER_INLINE)
+#if ENABLED(LASER_FEATURE)
   typedef struct {
     /**
      * Laser status flags
@@ -367,7 +367,7 @@ class Planner {
 
     static planner_settings_t settings;
 
-    #if ENABLED(LASER_POWER_INLINE)
+    #if ENABLED(LASER_FEATURE)
       static laser_state_t laser_inline;
     #endif
 

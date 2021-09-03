@@ -43,9 +43,14 @@ uint8_t SpindleLaser::power = 0;
 
 #if ENABLED(LASER_FEATURE)
   cutter_test_pulse_t SpindleLaser::testPulse = 50;                   // (ms) Test fire pulse default duration
+  uint8_t SpindleLaser::last_block_power;                             // Track power changes for dynamic power
+  feedRate_t SpindleLaser::feedrate_mm_m = 1500,
+             SpindleLaser::last_feedrate_mm_m; // = 0                 // (mm/min) Track feedrate changes for dynamic power
 #endif
 
 bool SpindleLaser::isReady = false;                                   // Ready to apply power setting from the UI to OCR
+CutterMode SpindleLaser::cutter_mode = CUTTER_MODE_STANDARD;
+
 cutter_power_t SpindleLaser::menuPower = 0,                           // Power set via LCD menu in PWM, PERCENT, or RPM
                SpindleLaser::unitPower = 0;                           // LCD status power in PWM, PERCENT, or RPM
 

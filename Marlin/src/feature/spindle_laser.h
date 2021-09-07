@@ -103,6 +103,7 @@ public:
   #if ENABLED(LASER_FEATURE)
     static cutter_test_pulse_t testPulse;                 // (ms) Test fire pulse duration
     static uint8_t last_block_power;                      // Track power changes for dynamic power
+    static uint8_t last_power_applied;                    // Basic power state tracking
     static feedRate_t feedrate_mm_m, last_feedrate_mm_m;  // (mm/min) Track feedrate changes for dynamic power
     static inline bool laser_feedrate_changed() {
       if (last_feedrate_mm_m != feedrate_mm_m) { last_feedrate_mm_m = feedrate_mm_m; return true; }
@@ -231,6 +232,18 @@ public:
       rate >>= 8;                                    // Take the G-code input e.g. F40000 and shift off the lower bits to get an OCR value from 1-255
       return uint8_t(rate);
     }
+
+    // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
+    static inline void laser_menu_toggle(const bool state) {
+      if (state) {
+        if (menuPower)
+          power = cpwr_to_upwr(menuPower);
+        else 
+          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
+        update_from_mpower(); 
+      }
+      set_enabled(state);
+    }
   #endif
 
   #if ENABLED(SPINDLE_CHANGE_DIR)
@@ -290,9 +303,11 @@ public:
        */
       static inline void test_fire_pulse() {
         TERN_(USE_BEEPER, buzzer.tone(30, 3000));
-        enable_forward();                  // Laser on (Spindle speak but same funct)
+        cutter_mode = CUTTER_MODE_STANDARD;// Menu needs standard mode.
+        update_from_mpower();              // Pull the power setting from menuPower
+        laser_menu_toggle(true);           // Laser On 
         delay(testPulse);                  // Delay for time set by user in pulse ms menu screen.
-        disable();                         // Laser off
+        laser_menu_toggle(false);          // Laser Off
       }
     #endif
 

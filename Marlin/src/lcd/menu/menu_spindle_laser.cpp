@@ -49,7 +49,12 @@
     #endif
 
     editable.state = is_enabled;
-    EDIT_ITEM(bool, MSG_CUTTER(TOGGLE), &is_enabled, []{ if (editable.state) cutter.disable(); else cutter.enable_same_dir(); });
+    #if ENABLED(SPINDLE_FEATURE)
+      EDIT_ITEM(bool, MSG_CUTTER(TOGGLE), &is_enabled, []{ if (editable.state) cutter.disable(); else cutter.enable_same_dir(); });
+    #else
+      EDIT_ITEM(bool, MSG_CUTTER(TOGGLE), &is_enabled, []{cutter.laser_menu_toggle(!editable.state); });
+    #endif  
+
 
     #if ENABLED(AIR_EVACUATION)
       bool evac_state = cutter.air_evac_state();

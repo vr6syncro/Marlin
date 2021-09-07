@@ -233,7 +233,25 @@ public:
       return uint8_t(rate);
     }
 
+<<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+    // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
+    static inline void laser_menu_toggle(const bool state) {
+      if (state) {
+        if (menuPower)
+          power = cpwr_to_upwr(menuPower);
+        else 
+          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
+        update_from_mpower(); 
+      }
+      set_enabled(state);
+    }
+>>>>>>> db6641b247 (Update Laser Menu)
+=======
+
+>>>>>>> df412ee3cc (Update spindle dir control)
   #endif
 
   #if ENABLED(SPINDLE_CHANGE_DIR)

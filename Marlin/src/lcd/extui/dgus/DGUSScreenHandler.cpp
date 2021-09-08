@@ -22,7 +22,7 @@
 
 #include "../../../inc/MarlinConfigPre.h"
 
-#if HAS_DGUS_LCD
+#if HAS_DGUS_LCD_CLASSIC
 
 #include "DGUSScreenHandler.h"
 
@@ -559,7 +559,7 @@ void DGUSScreenHandler::HandleStepPerMMExtruderChanged(DGUS_VP_Variable &var, vo
         #endif
         #if ENABLED(PIDTEMPBED)
           case VP_PID_AUTOTUNE_BED:
-            sprintf_P(buf, PSTR("M303 E-1 C5 S70 U1"));
+            strcpy_P(buf, PSTR("M303 E-1 C5 S70 U1"));
             break;
         #endif
     }
@@ -772,4 +772,4 @@ void DGUSDisplay::RequestScreen(DGUSLCD_Screens screen) {
   WriteVariable(0x84, gotoscreen, sizeof(gotoscreen));
 }
 
-#endif // HAS_DGUS_LCD
+#endif // HAS_DGUS_LCD_CLASSIC

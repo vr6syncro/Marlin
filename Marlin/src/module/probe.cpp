@@ -79,6 +79,8 @@
 
 #if ENABLED(EXTENSIBLE_UI)
   #include "../lcd/extui/ui_api.h"
+#elif ENABLED(DWIN_CREALITY_LCD_ENHANCED)
+  #include "../lcd/e3v2/enhanced/dwin.h"
 #endif
 
 #define DEBUG_OUT ENABLED(DEBUG_LEVELING_FEATURE)
@@ -250,21 +252,16 @@ xyz_pos_t Probe::offset; // Initialized by settings.load()
     TERN_(PROBING_HEATERS_OFF, thermalManager.pause_heaters(dopause));
     TERN_(PROBING_FANS_OFF, thermalManager.set_fans_paused(dopause));
     TERN_(PROBING_ESTEPPERS_OFF, if (dopause) disable_e_steppers());
-    #if ENABLED(PROBING_STEPPERS_OFF)
-      IF_DISABLED(DELTA, static uint8_t old_trusted);
+    #if ENABLED(PROBING_STEPPERS_OFF) && DISABLED(DELTA)
+      static uint8_t old_trusted;
       if (dopause) {
-        #if DISABLED(DELTA)
-          old_trusted = axis_trusted;
-          DISABLE_AXIS_X();
-          DISABLE_AXIS_Y();
-        #endif
-        IF_DISABLED(PROBING_ESTEPPERS_OFF, disable_e_steppers());
+        old_trusted = axis_trusted;
+        DISABLE_AXIS_X();
+        DISABLE_AXIS_Y();
       }
       else {
-        #if DISABLED(DELTA)
-          if (TEST(old_trusted, X_AXIS)) ENABLE_AXIS_X();
-          if (TEST(old_trusted, Y_AXIS)) ENABLE_AXIS_Y();
-        #endif
+        if (TEST(old_trusted, X_AXIS)) ENABLE_AXIS_X();
+        if (TEST(old_trusted, Y_AXIS)) ENABLE_AXIS_Y();
         axis_trusted = old_trusted;
       }
     #endif
@@ -287,7 +284,7 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
   #if ENABLED(PAUSE_BEFORE_DEPLOY_STOW)
     do {
       #if ENABLED(PAUSE_PROBE_DEPLOY_WHEN_TRIGGERED)
-        if (deploy == PROBE_TRIGGERED()) break;
+        if (deploy != PROBE_TRIGGERED()) break;
       #endif
 
       BUZZ(100, 659);
@@ -300,7 +297,7 @@ FORCE_INLINE void probe_specific_action(const bool deploy) {
 
       TERN_(HOST_PROMPT_SUPPORT, host_prompt_do(PROMPT_USER_CONTINUE, PSTR("Stow Probe"), CONTINUE_STR));
       TERN_(EXTENSIBLE_UI, ExtUI::onUserConfirmRequired_P(PSTR("Stow Probe")));
-
+      TERN_(DWIN_CREALITY_LCD_ENHANCED, DWIN_Popup_Confirm(ICON_BLTouch, PSTR("Stow Probe"), CONTINUE_STR));
       wait_for_user_response();
       ui.reset_status();
 
@@ -756,7 +753,7 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
   if (DEBUGGING(LEVELING)) {
     DEBUG_ECHOLNPAIR(
       "...(", LOGICAL_X_POSITION(rx), ", ", LOGICAL_Y_POSITION(ry),
-      ", ", raise_after == PROBE_PT_RAISE ? "raise" : raise_after == PROBE_PT_STOW ? "stow" : "none",
+      ", ", raise_after == PROBE_PT_RAISE ? "raise" : raise_after == PROBE_PT_LAST_STOW ? "stow (last)" : raise_after == PROBE_PT_STOW ? "stow" : "none",
       ", ", verbose_level,
       ", ", probe_relative ? "probe" : "nozzle", "_relative)"
     );
@@ -787,7 +784,7 @@ float Probe::probe_at_point(const_float_t rx, const_float_t ry, const ProbePtRai
     const bool big_raise = raise_after == PROBE_PT_BIG_RAISE;
     if (big_raise || raise_after == PROBE_PT_RAISE)
       do_blocking_move_to_z(current_position.z + (big_raise ? 25 : Z_CLEARANCE_BETWEEN_PROBES), z_probe_fast_mm_s);
-    else if (raise_after == PROBE_PT_STOW)
+    else if (raise_after == PROBE_PT_STOW || raise_after == PROBE_PT_LAST_STOW)
       if (stow()) measured_z = NAN;   // Error on stow?
 
     if (verbose_level > 2)

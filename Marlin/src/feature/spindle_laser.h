@@ -99,11 +99,11 @@ public:
 
   static const cutter_power_t mpower_min() { return cpwr_to_upwr(SPEED_POWER_MIN); }
   static const cutter_power_t mpower_max() { return cpwr_to_upwr(SPEED_POWER_MAX); }
+  static uint8_t last_power_applied;                      // Basic power state tracking
 
   #if ENABLED(LASER_FEATURE)
     static cutter_test_pulse_t testPulse;                 // (ms) Test fire pulse duration
     static uint8_t last_block_power;                      // Track power changes for dynamic power
-    static uint8_t last_power_applied;                    // Basic power state tracking
     static feedRate_t feedrate_mm_m, last_feedrate_mm_m;  // (mm/min) Track feedrate changes for dynamic power
     static inline bool laser_feedrate_changed() {
       if (last_feedrate_mm_m != feedrate_mm_m) { last_feedrate_mm_m = feedrate_mm_m; return true; }

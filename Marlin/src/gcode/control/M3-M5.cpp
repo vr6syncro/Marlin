@@ -101,7 +101,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
     #else
       cutter.set_enabled(true);
     #endif
-    TERN_(SPINDLE_FEATURE, cutter.set_reverse(is_M4));
+    TERN_(SPINDLE_CHANGE_DIR, cutter.set_reverse(is_M4));
   }
 }
 

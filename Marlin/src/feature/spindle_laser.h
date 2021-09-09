@@ -233,22 +233,15 @@ public:
       return uint8_t(rate);
     }
 
-    // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
-    static inline void laser_menu_toggle(const bool state) {
-      if (state) {
-        if (menuPower)
-          power = cpwr_to_upwr(menuPower);
-        else 
-          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-        update_from_mpower(); 
-      }
-      set_enabled(state);
-    }
+
   #endif
 
   #if ENABLED(SPINDLE_CHANGE_DIR)
     static void set_reverse(const bool reverse);
     static bool is_reverse() { return READ(SPINDLE_DIR_PIN) == SPINDLE_INVERT_DIR; }
+  #else
+    static inline void set_reverse(const bool) {}
+    static bool is_reverse() { return false; }
   #endif
 
   #if ENABLED(AIR_EVACUATION)
@@ -271,30 +264,41 @@ public:
 
   #if HAS_LCD_MENU
     #if ENABLED(SPINDLE_FEATURE)
-      static inline void enable_with_dir(const bool reverse) {
-        isReady = true;
-        const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
-        if (menuPower)
-          power = ocr;
-        else
-          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-        unitPower = menuPower;
-        set_reverse(reverse);
-        set_enabled(true);
-      }
-      FORCE_INLINE static void enable_forward() { enable_with_dir(false); }
-      FORCE_INLINE static void enable_reverse() { enable_with_dir(true); }
-      FORCE_INLINE static void enable_same_dir() { enable_with_dir(is_reverse()); }
-    #endif // SPINDLE_FEATURE
-
-    #if ENABLED(SPINDLE_LASER_PWM)
-      static inline void update_from_mpower() {
-        if (isReady) power = upower_to_ocr(menuPower);
-        unitPower = menuPower;
-      }
+    static inline void enable_with_dir(const bool reverse) {
+      isReady = true;
+      const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
+      if (menuPower)
+        power = ocr;
+      else
+        menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
+      unitPower = menuPower;
+      set_reverse(reverse);
+      set_enabled(true);
+    }
+    FORCE_INLINE static void enable_forward() { enable_with_dir(false); }
+    FORCE_INLINE static void enable_reverse() { enable_with_dir(true); }
+    FORCE_INLINE static void enable_same_dir() { enable_with_dir(is_reverse()); 
+    }
     #endif
 
+    static inline void update_from_mpower() {
+      if (isReady) power = upower_to_ocr(menuPower);
+      unitPower = menuPower;
+    }
+
     #if ENABLED(LASER_FEATURE)
+      // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
+      static inline void laser_menu_toggle(const bool state) {
+        if (state) {
+          if (menuPower)
+            power = cpwr_to_upwr(menuPower);
+          else 
+            menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
+          update_from_mpower(); 
+        }
+        set_enabled(state);
+      }
+      
       /**
        * Test fire the laser using the testPulse ms duration
        * Also fires with any PWM power that was previous set

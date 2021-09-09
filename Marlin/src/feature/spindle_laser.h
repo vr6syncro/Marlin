@@ -249,9 +249,6 @@ public:
   #if ENABLED(SPINDLE_CHANGE_DIR)
     static void set_reverse(const bool reverse);
     static bool is_reverse() { return READ(SPINDLE_DIR_PIN) == SPINDLE_INVERT_DIR; }
-  #else
-    static inline void set_reverse(const bool) { cutter_mode = CUTTER_MODE_DYNAMIC; }
-    static bool is_reverse() { return false; }
   #endif
 
   #if ENABLED(AIR_EVACUATION)
@@ -273,20 +270,22 @@ public:
   #endif
 
   #if HAS_LCD_MENU
-    static inline void enable_with_dir(const bool reverse) {
-      isReady = true;
-      const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
-      if (menuPower)
-        power = ocr;
-      else
-        menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-      unitPower = menuPower;
-      set_reverse(reverse);
-      set_enabled(true);
-    }
-    FORCE_INLINE static void enable_forward() { enable_with_dir(false); }
-    FORCE_INLINE static void enable_reverse() { enable_with_dir(true); }
-    FORCE_INLINE static void enable_same_dir() { enable_with_dir(is_reverse()); }
+    #if ENABLED(SPINDLE_FEATURE)
+      static inline void enable_with_dir(const bool reverse) {
+        isReady = true;
+        const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
+        if (menuPower)
+          power = ocr;
+        else
+          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
+        unitPower = menuPower;
+        set_reverse(reverse);
+        set_enabled(true);
+      }
+      FORCE_INLINE static void enable_forward() { enable_with_dir(false); }
+      FORCE_INLINE static void enable_reverse() { enable_with_dir(true); }
+      FORCE_INLINE static void enable_same_dir() { enable_with_dir(is_reverse()); }
+    #endif // SPINDLE_FEATURE
 
     #if ENABLED(SPINDLE_LASER_PWM)
       static inline void update_from_mpower() {
@@ -319,9 +318,9 @@ public:
     static inline void set_inline_enabled(const bool enable) { planner.laser_inline.status.isEnabled = enable; }
 
     // Set the power for subsequent movement blocks
-    static void inline_power(const cutter_power_t upwr) {
-      unitPower = menuPower = upwr;
-      TERN(SPINDLE_LASER_PWM, planner.laser_inline.power = upower_to_ocr(upwr), planner.laser_inline.power = upwr > 0 ? 255 : 0);
+    static void inline_power(const cutter_power_t cpwr) {
+      unitPower = menuPower = cpwr_to_upwr(cpwr);
+      TERN(SPINDLE_LASER_PWM, planner.laser_inline.power = cpwr, planner.laser_inline.power = cpwr > 0 ? 255 : 0);
     }
 
   #endif  // LASER_FEATURE

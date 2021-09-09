@@ -180,7 +180,7 @@ void GcodeSuite::get_destination_from_command() {
       recovery.save();
   #endif
 
-  if (parser.linearval('F') > 0) {
+  if (parser.floatval('F') > 0) {
     feedrate_mm_s = parser.value_feedrate();
     TERN_(LASER_FEATURE, cutter.feedrate_mm_m = parser.value_float());
   }
@@ -202,8 +202,8 @@ void GcodeSuite::get_destination_from_command() {
       if (WITHIN(parser.codenum, 1, TERN(ARC_SUPPORT, 3, 1)) || TERN0(BEZIER_CURVE_SUPPORT, parser.codenum == 5)) {
         planner.laser_inline.status.isPowered = true;
         if (parser.seen('S')) {
-          const float spwr = parser.value_float();
-          cutter.inline_power(cutter.power_to_range(cutter_power_t(spwr)));
+          cutter.unitPower = parser.value_float();
+          cutter.inline_power(cutter.power_to_range(cutter_power_t(cutter.unitPower)));
         }
       }
       else if (parser.codenum == 0) {

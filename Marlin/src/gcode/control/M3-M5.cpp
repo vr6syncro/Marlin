@@ -74,7 +74,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
 
   auto get_s_power = [] {
     if (parser.seen('S')) {
-      cutter.unitPower = parser.value_ushort();
+      cutter.unitPower = parser.value_float();
       // PWM implied and ranges from S0 to S180 for a positional servo. Typical use would be a pen up/down function.
       #if ENABLED(SPINDLE_SERVO)
         cutter.power = cutter.unitPower;
@@ -101,7 +101,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
     #else
       cutter.set_enabled(true);
     #endif
-    cutter.set_reverse(is_M4);
+    TERN_(SPINDLE_FEATURE, cutter.set_reverse(is_M4));
   }
 }
 

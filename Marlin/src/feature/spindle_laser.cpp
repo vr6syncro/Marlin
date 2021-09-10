@@ -49,7 +49,7 @@ uint8_t SpindleLaser::last_power_applied = 0;                         // Basic p
              SpindleLaser::last_feedrate_mm_m; // = 0                 // (mm/min) Track feedrate changes for dynamic power
 #endif
 
-bool SpindleLaser::isReady = false;                                   // Ready to apply power setting from the UI to OCR
+bool SpindleLaser::isReadyForUI = false;                              // Ready to apply power setting from the UI to OCR
 CutterMode SpindleLaser::cutter_mode = CUTTER_MODE_STANDARD;
 
 cutter_power_t SpindleLaser::menuPower = 0,                           // Power set via LCD menu in PWM, PERCENT, or RPM
@@ -130,23 +130,23 @@ void SpindleLaser::apply_power(const uint8_t opwr) {
   last_power_applied = opwr;
   power = opwr;
   #if ENABLED(SPINDLE_LASER_PWM)
-    if (cutter.unitPower == 0 && CUTTER_UNIT_IS(RPM)) {
+    if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
       ocr_off();
-      isReady = false;
+      isReadyForUI = false;
     }
     else if (ENABLED(CUTTER_POWER_RELATIVE) || enabled()) {
       set_ocr(power);
-      isReady = true;
+      isReadyForUI = true;
     }
     else {
       ocr_off();
-      isReady = false;
+      isReadyForUI = false;
     }
   #elif ENABLED(SPINDLE_SERVO)
     MOVE_SERVO(SPINDLE_SERVO_NR, power);
   #else
     WRITE(SPINDLE_LASER_ENA_PIN, enabled() ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
-    isReady = true;
+    isReadyForUI = true;
   #endif
 }
 

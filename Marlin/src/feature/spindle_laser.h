@@ -108,7 +108,7 @@ public:
     }
   #endif
 
-  static bool isReady;                    // Ready to apply power setting from the UI to OCR
+  static bool isReadyForUI;               // Ready to apply power setting from the UI to OCR
   static uint8_t power;
 
   #if ENABLED(MARLIN_DEV_MODE)
@@ -218,7 +218,7 @@ public:
     }
   }
 
-  static inline void disable() { isReady = false; set_enabled(false); }
+  static inline void disable() { isReadyForUI = false; set_enabled(false); }
 
   // Wait for spindle/laser to startup or shutdown
   static inline void power_delay(const bool on) {
@@ -254,7 +254,7 @@ public:
   #if HAS_LCD_MENU
     #if ENABLED(SPINDLE_FEATURE)
       static inline void enable_with_dir(const bool reverse) {
-        isReady = true;
+        isReadyForUI = true;
         const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
         if (menuPower)
           power = ocr;
@@ -271,7 +271,7 @@ public:
 
     #if ENABLED(SPINDLE_LASER_PWM)
       static inline void update_from_mpower() {
-        if (isReady) power = upower_to_ocr(menuPower);
+        if (isReadyForUI) power = upower_to_ocr(menuPower);
         unitPower = menuPower;
       }
     #endif

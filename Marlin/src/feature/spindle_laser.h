@@ -104,6 +104,7 @@ public:
   #if ENABLED(LASER_FEATURE)
     static cutter_test_pulse_t testPulse;                 // (ms) Test fire pulse duration
     static uint8_t last_block_power;                      // Track power changes for dynamic power
+
     static feedRate_t feedrate_mm_m, last_feedrate_mm_m;  // (mm/min) Track feedrate changes for dynamic power
     static inline bool laser_feedrate_changed() {
       if (last_feedrate_mm_m != feedrate_mm_m) { last_feedrate_mm_m = feedrate_mm_m; return true; }
@@ -225,35 +226,6 @@ public:
     safe_delay(on ? SPINDLE_LASER_POWERUP_DELAY : SPINDLE_LASER_POWERDOWN_DELAY);
   }
 
-  #if ENABLED(LASER_FEATURE)
-    static inline uint8_t calc_dynamic_power() {
-      if (feedrate_mm_m > 65535) return 255;         // Too fast, go always on
-      uint16_t rate = uint16_t(feedrate_mm_m);       // 32 bits from the G-code parser float input
-      rate >>= 8;                                    // Take the G-code input e.g. F40000 and shift off the lower bits to get an OCR value from 1-255
-      return uint8_t(rate);
-    }
-
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
-    // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
-    static inline void laser_menu_toggle(const bool state) {
-      if (state) {
-        if (menuPower)
-          power = cpwr_to_upwr(menuPower);
-        else 
-          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-        update_from_mpower(); 
-      }
-      set_enabled(state);
-    }
->>>>>>> db6641b247 (Update Laser Menu)
-=======
-
->>>>>>> df412ee3cc (Update spindle dir control)
-  #endif
-
   #if ENABLED(SPINDLE_CHANGE_DIR)
     static void set_reverse(const bool reverse);
     static bool is_reverse() { return READ(SPINDLE_DIR_PIN) == SPINDLE_INVERT_DIR; }
@@ -315,6 +287,14 @@ public:
           update_from_mpower(); 
         }
         set_enabled(state);
+      }
+
+      // Dynamic mode rate calculation
+      static inline uint8_t calc_dynamic_power() {
+        if (feedrate_mm_m > 65535) return 255;         // Too fast, go always on
+        uint16_t rate = uint16_t(feedrate_mm_m);       // 32 bits from the G-code parser float input
+        rate >>= 8;                                    // Take the G-code input e.g. F40000 and shift off the lower bits to get an OCR value from 1-255
+        return uint8_t(rate);
       }
       
       /**

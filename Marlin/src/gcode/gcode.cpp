@@ -220,8 +220,8 @@ void GcodeSuite::get_destination_from_command() {
       if (WITHIN(parser.codenum, 1, TERN(ARC_SUPPORT, 3, 1)) || TERN0(BEZIER_CURVE_SUPPORT, parser.codenum == 5)) {
         planner.laser_inline.status.isPowered = true;
         if (parser.seen('S')) {
-          cutter.unitPower = parser.value_float();
-          cutter.inline_power(cutter.power_to_range(cutter_power_t(cutter.unitPower)));
+          cutter.unitPower = cutter.power_to_range(parser.value_float());
+          cutter.inline_power(cutter.upower_to_ocr(cutter.unitPower));
         }
       }
       else if (parser.codenum == 0) {

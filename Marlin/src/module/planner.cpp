@@ -1308,7 +1308,7 @@ void Planner::recalculate() {
 #endif // HAS_FAN
 
 /**
- * Maintain fans, paste extruder pressure,
+ * Maintain fans, paste extruder pressure, spindle/laser power
  */
 void Planner::check_axes_activity() {
 
@@ -1360,6 +1360,8 @@ void Planner::check_axes_activity() {
     #endif
   }
   else {
+
+    TERN_(HAS_CUTTER, cutter.refresh());
 
     #if HAS_TAIL_FAN_SPEED
       FANS_LOOP(i) tail_fan_speed[i] = thermalManager.scaledFanSpeed(i);

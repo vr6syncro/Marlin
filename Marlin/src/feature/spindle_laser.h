@@ -54,10 +54,6 @@ enum CutterMode : int8_t {
 
 class SpindleLaser {
 public:
-  static constexpr float
-    min_pct = TERN(CUTTER_POWER_RELATIVE, 0, TERN(SPINDLE_FEATURE, round(100.0f * (SPEED_POWER_MIN) / (SPEED_POWER_MAX)), SPEED_POWER_MIN)),
-    max_pct = TERN(SPINDLE_FEATURE, 100, SPEED_POWER_MAX);
-
   static const inline uint8_t pct_to_ocr(const_float_t pct) { return uint8_t(PCT_TO_PWM(pct)); }
 
   static CutterMode cutter_mode;
@@ -172,6 +168,9 @@ public:
     }
 
     static inline cutter_power_t power_to_range(const cutter_power_t pwr, const uint8_t pwrUnit) {
+      static constexpr float
+        min_pct = TERN(CUTTER_POWER_RELATIVE, 0, TERN(SPINDLE_FEATURE, round(100.0f * (SPEED_POWER_MIN) / (SPEED_POWER_MAX)), SPEED_POWER_MIN)),
+        max_pct = TERN(SPINDLE_FEATURE, 100, SPEED_POWER_MAX);
       if (pwr <= 0) return 0;
       cutter_power_t upwr;
       switch (pwrUnit) {
@@ -254,27 +253,28 @@ public:
 
   #if HAS_LCD_MENU
     #if ENABLED(SPINDLE_FEATURE)
-    static inline void enable_with_dir(const bool reverse) {
-      isReady = true;
-      const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
-      if (menuPower)
-        power = ocr;
-      else
-        menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-      unitPower = menuPower;
-      set_reverse(reverse);
-      set_enabled(true);
-    }
-    FORCE_INLINE static void enable_forward() { enable_with_dir(false); }
-    FORCE_INLINE static void enable_reverse() { enable_with_dir(true); }
-    FORCE_INLINE static void enable_same_dir() { enable_with_dir(is_reverse()); 
-    }
-    #endif
+      static inline void enable_with_dir(const bool reverse) {
+        isReady = true;
+        const uint8_t ocr = TERN(SPINDLE_LASER_PWM, upower_to_ocr(menuPower), 255);
+        if (menuPower)
+          power = ocr;
+        else
+          menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
+        unitPower = menuPower;
+        set_reverse(reverse);
+        set_enabled(true);
+      }
+      FORCE_INLINE static void enable_forward() { enable_with_dir(false); }
+      FORCE_INLINE static void enable_reverse() { enable_with_dir(true); }
+      FORCE_INLINE static void enable_same_dir() { enable_with_dir(is_reverse()); }
+    #endif // SPINDLE_FEATURE
 
-    static inline void update_from_mpower() {
-      if (isReady) power = upower_to_ocr(menuPower);
-      unitPower = menuPower;
-    }
+    #if ENABLED(SPINDLE_LASER_PWM)
+      static inline void update_from_mpower() {
+        if (isReady) power = upower_to_ocr(menuPower);
+        unitPower = menuPower;
+      }
+    #endif
 
     #if ENABLED(LASER_FEATURE)
       // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
@@ -282,9 +282,9 @@ public:
         if (state) {
           if (menuPower)
             power = cpwr_to_upwr(menuPower);
-          else 
+          else
             menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-          update_from_mpower(); 
+          update_from_mpower();
         }
         set_enabled(state);
       }
@@ -296,7 +296,7 @@ public:
         rate >>= 8;                                    // Take the G-code input e.g. F40000 and shift off the lower bits to get an OCR value from 1-255
         return uint8_t(rate);
       }
-      
+
       /**
        * Test fire the laser using the testPulse ms duration
        * Also fires with any PWM power that was previous set
@@ -310,7 +310,7 @@ public:
         delay(testPulse);                  // Delay for time set by user in pulse ms menu screen.
         laser_menu_toggle(false);          // Laser Off
       }
-    #endif
+    #endif // LASER_FEATURE
 
   #endif // HAS_LCD_MENU
 

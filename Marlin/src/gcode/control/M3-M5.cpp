@@ -76,7 +76,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       cutter.unitPower = cutter.power_to_range(parser.value_float());
       // PWM implied and ranges from S0 to S180 for a positional servo. Typical use would be a pen up/down function.
       #if ENABLED(SPINDLE_SERVO)
-        cutter.power = upower_to_ocr(cutter.unitPower));
+        cutter.power = upower_to_ocr(cutter.unitPower);
       #else
         if (cutter.cutter_mode == CUTTER_MODE_STANDARD) // PWM not implied, power converted to OCR from unit definition and min/max or on/off if not PWM.
           cutter.power = TERN(SPINDLE_LASER_PWM, cutter.upower_to_ocr(cutter.unitPower), cutter.unitPower > 0 ? 255 : 0);

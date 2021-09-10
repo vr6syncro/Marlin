@@ -98,7 +98,8 @@ void SpindleLaser::init() {
    * @param ocr Power value
    */
   void SpindleLaser::_set_ocr(const uint8_t ocr) {
-    #if NEEDS_HARDWARE_PWM && SPINDLE_LASER_FREQUENCY
+    //if (DEBUGGING(DRYRUN)) ocr = 0;
+    #if ENABLED(SPINDLE_LASER_PWM) && SPINDLE_LASER_FREQUENCY
       set_pwm_frequency(pin_t(SPINDLE_LASER_PWM_PIN), TERN(MARLIN_DEV_MODE, frequency, SPINDLE_LASER_FREQUENCY));
       set_pwm_duty(pin_t(SPINDLE_LASER_PWM_PIN), ocr ^ SPINDLE_LASER_PWM_OFF);
     #else

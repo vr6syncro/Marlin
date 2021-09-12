@@ -66,14 +66,14 @@ public:
     return cpwr ? round(100.0f * (cpwr - power_floor) / power_range) : 0;
   }
 
-  // Convert a cpower (e.g., SPEED_POWER_STARTUP) to unit power (upwr, upower),
-  // which can be PWM, Percent, Servo angle, or RPM (rel/abs).
+  // Convert config defines from RPM to %, angle or PWM when in Spindle mode 
+  // and convert from PERCENT to PWM when in Laser mode  
   static const inline cutter_power_t cpwr_to_upwr(const cutter_cpower_t cpwr) { // STARTUP power to Unit power
     const cutter_power_t upwr = (
       #if ENABLED(SPINDLE_FEATURE)
-        // Spindle configured values are in RPM
+        // Spindle configured define values are in RPM
         #if CUTTER_UNIT_IS(RPM)
-          cpwr                            // to RPM
+          cpwr                            // to same
         #elif CUTTER_UNIT_IS(PERCENT)     // to PCT
           cpwr_to_pct(cpwr)
         #elif CUTTER_UNIT_IS(SERVO)       // to SERVO angle
@@ -82,11 +82,11 @@ public:
           PCT_TO_PWM(cpwr_to_pct(cpwr))
         #endif
       #else
-        // Laser configured values are in PCT
+        // Laser configured define values are in PCT
         #if CUTTER_UNIT_IS(PWM255)
           PCT_TO_PWM(cpwr)
         #else
-          cpwr                            // to RPM/PCT
+          cpwr                            // to same
         #endif
       #endif
     );
@@ -321,7 +321,6 @@ public:
 
     // Set the power for subsequent movement blocks
     static void inline_power(const cutter_power_t cpwr) {
-      unitPower = menuPower = cpwr_to_upwr(cpwr);
       TERN(SPINDLE_LASER_PWM, planner.laser_inline.power = cpwr, planner.laser_inline.power = cpwr > 0 ? 255 : 0);
     }
 

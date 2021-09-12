@@ -222,6 +222,7 @@ void GcodeSuite::get_destination_from_command() {
         if (parser.seen('S')) {
           cutter.unitPower = cutter.power_to_range(parser.value_float());
           cutter.inline_power(cutter.upower_to_ocr(cutter.unitPower));
+          cutter.menuPower = cutter.unitPower;
         }
       }
       else if (parser.codenum == 0) {

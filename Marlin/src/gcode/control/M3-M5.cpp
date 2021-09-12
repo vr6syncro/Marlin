@@ -1,6 +1,6 @@
 /**
  * Marlin 3D Printer Firmware
- * Copyright (c) 2020 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
+ * Copyright (c) 2021 MarlinFirmware [https://github.com/MarlinFirmware/Marlin]
  *
  * Based on Sprinter and grbl.
  * Copyright (c) 2011 Camiel Gubbels / Erik van der Zalm
@@ -31,7 +31,13 @@
 /**
  * Laser:
  *  M3 - Laser ON/Power (Ramped power)
- *  M4 - Laser ON/Power (Dynamic power)
+ *  M4 - Laser ON/Power (Ramped power)
+ *  M3 I enables continuous inline power and it is processed by the planner. Move blocks are 
+ *  calculated and each block power buffer value is set there. The Stepper ISR then processes the blocks inline.
+ *  Within inline mode M3 S-Values will set the power for the next moves e.g. G1 X10 Y10 powers on with the last S-Value
+ *  M4 I sets dynamic mode which takes the currently set feedrate and calculates a laser power OCR value
+ *  M5 I clears inline mode and set power to 0
+ *  M5 sets the power output to 0 but leaves inline mode on. 
  *
  * Spindle:
  *  M3 - Spindle ON (Clockwise)

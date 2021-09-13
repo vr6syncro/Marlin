@@ -72,7 +72,7 @@ void SpindleLaser::init() {
   #if ENABLED(SPINDLE_CHANGE_DIR)
     OUT_WRITE(SPINDLE_DIR_PIN, SPINDLE_INVERT_DIR ? 255 : 0);         // Init rotation to clockwise (M3)
   #endif
-  #if ENABLED(SPINDLE_LASER_PWM)
+  #if ENABLED(SPINDLE_LASER_USE_PWM)
     SET_PWM(SPINDLE_LASER_PWM_PIN);
     analogWrite(pin_t(SPINDLE_LASER_PWM_PIN), SPINDLE_LASER_PWM_OFF); // Set to lowest speed
   #endif
@@ -91,7 +91,7 @@ void SpindleLaser::init() {
   #endif
 }
 
-#if ENABLED(SPINDLE_LASER_PWM)
+#if ENABLED(SPINDLE_LASER_USE_PWM)
   /**
    * Set the cutter PWM directly to the given ocr value
    *
@@ -99,7 +99,7 @@ void SpindleLaser::init() {
    */
   void SpindleLaser::_set_ocr(const uint8_t ocr) {
     //if (DEBUGGING(DRYRUN)) ocr = 0;
-    #if ENABLED(SPINDLE_LASER_PWM) && SPINDLE_LASER_FREQUENCY
+    #if ENABLED(SPINDLE_LASER_USE_PWM) && SPINDLE_LASER_FREQUENCY
       set_pwm_frequency(pin_t(SPINDLE_LASER_PWM_PIN), TERN(MARLIN_DEV_MODE, frequency, SPINDLE_LASER_FREQUENCY));
       set_pwm_duty(pin_t(SPINDLE_LASER_PWM_PIN), ocr ^ SPINDLE_LASER_PWM_OFF);
     #else
@@ -116,7 +116,7 @@ void SpindleLaser::init() {
     WRITE(SPINDLE_LASER_ENA_PIN, !SPINDLE_LASER_ACTIVE_STATE); // Cutter OFF
     _set_ocr(0);
   }
-#endif // SPINDLE_LASER_PWM
+#endif // SPINDLE_LASER_USE_PWM
 
 /**
  * Apply power for laser/spindle
@@ -129,7 +129,7 @@ void SpindleLaser::apply_power(const uint8_t opwr) {
   if (opwr == last_power_applied) return;
   last_power_applied = opwr;
   power = opwr;
-  #if ENABLED(SPINDLE_LASER_PWM)
+  #if ENABLED(SPINDLE_LASER_USE_PWM)
     if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
       ocr_off();
       isReadyForUI = false;

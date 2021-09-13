@@ -2274,7 +2274,7 @@ uint32_t Stepper::block_phase_isr() {
               // Always have PWM in this case
               cutter.apply_power(stat.isPowered ? laser_trap.cur_power : 0 ); // ON with power or OFF
             #else
-              cutter.apply_power(stat.isPowered ? TERN(SPINDLE_LASER_PWM, current_block->laser.power, current_block->laser.power > 0 ? 255 : 0) : 0);
+              cutter.apply_power(stat.isPowered ? TERN(SPINDLE_LASER_USE_PWM, current_block->laser.power, current_block->laser.power > 0 ? 255 : 0) : 0);
             #endif
           }
         }

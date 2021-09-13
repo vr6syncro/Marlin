@@ -43,7 +43,6 @@
  */
 //#define STRING_DISTRIBUTION_DATE "2021-09-13"
 
-
 /**
  * Defines a generic printer name to be output to the LCD after booting Marlin.
  */

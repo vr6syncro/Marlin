@@ -288,15 +288,7 @@ public:
         }
         set_enabled(state);
       }
-
-      // Dynamic mode rate calculation
-      static inline uint8_t calc_dynamic_power() {
-        if (feedrate_mm_m > 65535) return 255;         // Too fast, go always on
-        uint16_t rate = uint16_t(feedrate_mm_m);       // 32 bits from the G-code parser float input
-        rate >>= 8;                                    // Take the G-code input e.g. F40000 and shift off the lower bits to get an OCR value from 1-255
-        return uint8_t(rate);
-      }
-
+   
       /**
        * Test fire the laser using the testPulse ms duration
        * Also fires with any PWM power that was previous set
@@ -315,6 +307,14 @@ public:
   #endif // HAS_LCD_MENU
 
   #if ENABLED(LASER_FEATURE)
+
+    // Dynamic mode rate calculation
+    static inline uint8_t calc_dynamic_power() {
+      if (feedrate_mm_m > 65535) return 255;         // Too fast, go always on
+      uint16_t rate = uint16_t(feedrate_mm_m);       // 32 bits from the G-code parser float input
+      rate >>= 8;                                    // Take the G-code input e.g. F40000 and shift off the lower bits to get an OCR value from 1-255
+      return uint8_t(rate);
+    }
 
     // Inline modes of all other functions; all enable planner inline power control
     static inline void set_inline_enabled(const bool enable) { planner.laser_inline.status.isEnabled = enable; }

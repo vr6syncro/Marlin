@@ -109,6 +109,11 @@ enum BlockFlagBit : char {
   #if ENABLED(LASER_SYNCHRONOUS_M106_M107)
     , BLOCK_BIT_SYNC_FANS
   #endif
+
+    // Sync laser power from a queued block
+  #if ENABLED(LASER_POWER_SYNC)
+    , BLOCK_BIT_LASER_PWR
+  #endif
 };
 
 enum BlockFlag : char {
@@ -122,9 +127,12 @@ enum BlockFlag : char {
   #if ENABLED(LASER_SYNCHRONOUS_M106_M107)
     , BLOCK_FLAG_SYNC_FANS          = _BV(BLOCK_BIT_SYNC_FANS)
   #endif
+  #if ENABLED(LASER_POWER_SYNC)
+    , BLOCK_FLAG_LASER_PWR          = _BV(BLOCK_BIT_LASER_PWR)
+  #endif  
 };
 
-#define BLOCK_MASK_SYNC ( BLOCK_FLAG_SYNC_POSITION | TERN0(LASER_SYNCHRONOUS_M106_M107, BLOCK_FLAG_SYNC_FANS) )
+#define BLOCK_MASK_SYNC ( BLOCK_FLAG_SYNC_POSITION | TERN0(LASER_SYNCHRONOUS_M106_M107, BLOCK_FLAG_SYNC_FANS) | TERN0(LASER_POWER_SYNC, BLOCK_FLAG_LASER_PWR ))
 
 #if ENABLED(LASER_FEATURE)
 
@@ -747,12 +755,12 @@ class Planner {
 
     /**
      * Planner::buffer_sync_block
-     * Add a block to the buffer that just updates the position or in
-     * case of LASER_SYNCHRONOUS_M106_M107 the fan pwm
+     * Add a block to the buffer that just updates the position
+     * @param sync_flag sets a condition bit to process additional items
+     * such as sync fan pwm or sync M3/M4 laser power into a queued block  
      */
-    static void buffer_sync_block(
-      TERN_(LASER_SYNCHRONOUS_M106_M107, uint8_t sync_flag=BLOCK_FLAG_SYNC_POSITION)
-    );
+    static void buffer_sync_block();
+    static void buffer_sync_block(uint8_t sync_flag);
 
   #if IS_KINEMATIC
     private:

@@ -71,7 +71,9 @@
  *  PWM duty cycle goes from 0 (off) to 255 (always on).
  */
 void GcodeSuite::M3_M4(const bool is_M4) {
-  planner.synchronize();   // Wait for previous movement commands (G0/G1/G2/G3) to complete before changing power
+  if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
+    planner.synchronize();   // Wait for previous movement commands (G0/G1/G2/G3) to complete before changing power
+
   if (parser.seen('I')) {
     cutter.cutter_mode = is_M4 ? CUTTER_MODE_DYNAMIC : CUTTER_MODE_CONTINUOUS;
     cutter.set_enabled(true);
@@ -96,7 +98,13 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   };
 
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode
-    TERN_(LASER_FEATURE, cutter.inline_power(cutter.upower_to_ocr(get_s_power())));
+    #if ENABLED(LASER_POWER_SYNC)
+      // With power sync we only set power so it does not effect already queued inline power settings
+      cutter.power = cutter.upower_to_ocr(get_s_power());
+      TERN_(LASER_POWER_SYNC, planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR));                     // Send the flag, queueing cutter.power  
+    #else  
+      TERN_(LASER_FEATURE, cutter.inline_power(cutter.upower_to_ocr(get_s_power())));
+    #endif  
   }
   else {
     #if ENABLED(SPINDLE_LASER_USE_PWM)

@@ -2835,15 +2835,20 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
 
 } // _populate_block()
 
+
+void Planner::buffer_sync_block() {
+    constexpr uint8_t sync_flag = BLOCK_FLAG_SYNC_POSITION;
+  buffer_sync_block(sync_flag);
+}
+
 /**
  * Planner::buffer_sync_block
- * Add a block to the buffer that just updates the position,
- * or in case of LASER_SYNCHRONOUS_M106_M107 the fan PWM
+ * Add a block to the buffer that just updates the position
+ * @param sync_flag BLOCK_FLAG_SYNC_FANS & BLOCK_FLAG_LASER_PWR 
+ * Support LASER_SYNCHRONOUS_M106_M107 and LASER_POWER_SYNC
+ * power sync block buffer queueing.   
  */
-void Planner::buffer_sync_block(TERN_(LASER_SYNCHRONOUS_M106_M107, uint8_t sync_flag)) {
-  #if DISABLED(LASER_SYNCHRONOUS_M106_M107)
-    constexpr uint8_t sync_flag = BLOCK_FLAG_SYNC_POSITION;
-  #endif
+void Planner::buffer_sync_block(uint8_t sync_flag) {
 
   // Wait for the next available block
   uint8_t next_buffer_head;
@@ -2858,6 +2863,11 @@ void Planner::buffer_sync_block(TERN_(LASER_SYNCHRONOUS_M106_M107, uint8_t sync_
 
   #if BOTH(HAS_FAN, LASER_SYNCHRONOUS_M106_M107)
     FANS_LOOP(i) block->fan_speed[i] = thermalManager.fan_speed[i];
+  #endif
+
+  #if ENABLED(LASER_POWER_SYNC)
+    laser_inline.power = cutter.power;
+    block->laser.power = laser_inline.power;
   #endif
 
   // If this is the first added movement, reload the delay, otherwise, cancel it.

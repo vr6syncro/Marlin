@@ -2074,14 +2074,19 @@ uint32_t Stepper::block_phase_isr() {
       // Sync block? Sync the stepper counts or fan speeds and return
       while (current_block->flag & BLOCK_MASK_SYNC) {
 
+        bool is_sync_pwr = false;
+
         #if ENABLED(LASER_SYNCHRONOUS_M106_M107)
-          const bool is_sync_fans = TEST(current_block->flag, BLOCK_BIT_SYNC_FANS);
-          if (is_sync_fans) planner.sync_fan_speeds(current_block->fan_speed);
-        #else
-          constexpr bool is_sync_fans = false;
+          is_sync_pwr = TEST(current_block->flag, BLOCK_BIT_SYNC_FANS);
+          if (is_sync_pwr) planner.sync_fan_speeds(current_block->fan_speed);
         #endif
 
-        if (!is_sync_fans) _set_position(current_block->position);
+        #if ENABLED(LASER_POWER_SYNC)
+          is_sync_pwr = TEST(current_block->flag, BLOCK_BIT_LASER_PWR);
+          if (is_sync_pwr) cutter.apply_power(current_block->laser.power);
+        #endif
+
+        if (!is_sync_pwr) _set_position(current_block->position);
 
         discard_current_block();
 

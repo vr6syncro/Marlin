@@ -288,7 +288,7 @@ public:
         }
         set_enabled(state);
       }
-   
+
       /**
        * Test fire the laser using the testPulse ms duration
        * Also fires with any PWM power that was previous set
@@ -324,7 +324,7 @@ public:
       TERN(SPINDLE_LASER_USE_PWM, planner.laser_inline.power = cpwr, planner.laser_inline.power = cpwr > 0 ? 255 : 0);
     }
 
-  #endif  // LASER_FEATURE
+  #endif // LASER_FEATURE
 
   static inline void kill() { disable(); }
 };

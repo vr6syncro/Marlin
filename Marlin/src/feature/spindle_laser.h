@@ -131,7 +131,6 @@ public:
   static void apply_power(const uint8_t inpow);
 
   FORCE_INLINE static void refresh() { apply_power(power); }
-  FORCE_INLINE static void set_power(const uint8_t upwr) { power = upwr; refresh(); }
 
   #if ENABLED(SPINDLE_LASER_USE_PWM)
 
@@ -142,7 +141,6 @@ public:
     public:
 
     static void set_ocr(const uint8_t ocr);
-    static inline void ocr_set_power(const uint8_t ocr) { power = ocr; set_ocr(ocr); }
     static void ocr_off();
 
     /**
@@ -207,13 +205,15 @@ public:
   static inline void set_enabled(const bool enable) {
     switch (cutter_mode) {
       case CUTTER_MODE_STANDARD:
-        set_power(enable ? TERN(SPINDLE_LASER_USE_PWM, (power ?: (unitPower ? upower_to_ocr(cpwr_to_upwr(SPEED_POWER_STARTUP)) : 0)), 255) : 0);
+        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdEnaPwr:"));
+        apply_power(enable ? TERN(SPINDLE_LASER_USE_PWM, (power ?: (unitPower ? upower_to_ocr(cpwr_to_upwr(SPEED_POWER_STARTUP)) : 0)), 255) : 0);
         break;
       case CUTTER_MODE_CONTINUOUS:
       case CUTTER_MODE_DYNAMIC:
         TERN_(LASER_FEATURE, set_inline_enabled(enable));
         // fallthru
       case CUTTER_MODE_ERROR: // Error mode, no enable and kill power.
+        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ErrPwr:", 0));
         apply_power(0);
     }
   }

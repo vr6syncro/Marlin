@@ -77,6 +77,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   if (parser.seen('I')) {
     cutter.cutter_mode = is_M4 ? CUTTER_MODE_DYNAMIC : CUTTER_MODE_CONTINUOUS;
     cutter.set_enabled(true);
+    return;
   }
 
   auto get_s_power = [] {
@@ -86,8 +87,8 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       #if ENABLED(SPINDLE_SERVO)
         cutter.power = upower_to_ocr(cutter.unitPower);
       #else
-        if (cutter.cutter_mode == CUTTER_MODE_STANDARD) // PWM not implied, power converted to OCR from unit definition and min/max or on/off if not PWM.
-          cutter.power = TERN(SPINDLE_LASER_USE_PWM, cutter.upower_to_ocr(cutter.unitPower), cutter.unitPower > 0 ? 255 : 0);
+        // PWM not implied, power converted to OCR from unit definition and min/max or on/off if not PWM.
+        cutter.power = TERN(SPINDLE_LASER_USE_PWM, cutter.upower_to_ocr(cutter.unitPower), cutter.unitPower > 0 ? 255 : 0);
       #endif
       cutter.menuPower = cutter.unitPower;
     }
@@ -100,17 +101,20 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode
     #if ENABLED(LASER_POWER_SYNC)
       // With power sync we only set power so it does not effect already queued inline power settings
-      cutter.power = cutter.upower_to_ocr(get_s_power());
+      get_s_power();                                                                                // Update cutter.power if seen
+      planner.laser_inline.status.isPowered = true;                                                                             
       TERN_(LASER_POWER_SYNC, planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR));                     // Send the flag, queueing cutter.power  
-    #else  
+    #else
+      TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("InlinePwr:get"));  
       TERN_(LASER_FEATURE, cutter.inline_power(cutter.upower_to_ocr(get_s_power())));
     #endif  
   }
   else {
     #if ENABLED(SPINDLE_LASER_USE_PWM)
-      cutter.set_power(cutter.upower_to_ocr(get_s_power()));
+      TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdPwr:get"));
+      cutter.apply_power(cutter.upower_to_ocr(get_s_power()));
     #elif ENABLED(SPINDLE_SERVO)
-      cutter.set_power(get_s_power());
+      cutter.apply_power(get_s_power());
     #else
       cutter.set_enabled(true);
     #endif
@@ -127,6 +131,7 @@ void GcodeSuite::M5() {
     cutter.set_enabled(false);                  // Clear inline mode flags
     cutter.cutter_mode = CUTTER_MODE_STANDARD;  // Switch from inline to standard mode, has no effect on current power output!
   }
+  TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("M5Pwr:",0));
   cutter.apply_power(0);                        // M5 kills power in either mode but if it's in inline it will be still be the active mode
 }
 

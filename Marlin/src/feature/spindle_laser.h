@@ -213,7 +213,7 @@ public:
         TERN_(LASER_FEATURE, set_inline_enabled(enable));
         // fallthru
       case CUTTER_MODE_ERROR: // Error mode, no enable and kill power.
-        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ErrPwr:", 0));
+        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ErrEnaPwr:", 0));
         apply_power(0);
     }
   }

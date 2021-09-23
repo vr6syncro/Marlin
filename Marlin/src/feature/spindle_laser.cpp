@@ -128,7 +128,7 @@ void SpindleLaser::init() {
 void SpindleLaser::apply_power(const uint8_t opwr) {
   if (opwr == last_power_applied) return;
   last_power_applied = opwr;
-  SERIAL_ECHO_MSG("OutPwr: ", opwr);
+  TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("OutPwr: ", opwr));
   #if ENABLED(SPINDLE_LASER_USE_PWM)
     if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
       ocr_off();

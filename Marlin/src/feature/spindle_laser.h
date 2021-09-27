@@ -126,8 +126,8 @@ public:
   #endif
 
   // Modifying this function should update everywhere
-  static inline bool enabled(const cutter_power_t opwr) { return opwr > 0; }
-  static inline bool enabled() { return enabled(enable_state); }
+  //static inline bool enabled(const cutter_power_t opwr) { return opwr > 0; }
+  static inline bool enabled() { return enable_state; }
 
   static void apply_power(const uint8_t inpow);
 
@@ -208,18 +208,20 @@ public:
       case CUTTER_MODE_STANDARD:
         TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdEnaPwr:"));
         apply_power(enable ? TERN(SPINDLE_LASER_USE_PWM, (power ?: (unitPower ? upower_to_ocr(cpwr_to_upwr(SPEED_POWER_STARTUP)) : 0)), 255) : 0);
-        enable_state = true;
         break;
       case CUTTER_MODE_CONTINUOUS:
         TERN_(LASER_FEATURE, set_inline_enabled(enable));
+        break;
       case CUTTER_MODE_DYNAMIC:
         TERN_(LASER_FEATURE, set_inline_enabled(enable));
         break;
       case CUTTER_MODE_ERROR: // Error mode, no enable and kill power.
         TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ErrEnaPwr:", 0));
-        set_enabled(false);
+        enable_state = false;
         apply_power(0);
     }
+        TERN_(SPINDLE_LASER_ENA_PIN, WRITE(SPINDLE_LASER_ENA_PIN, enable ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE));
+        enable_state = enable;
   }
 
   static inline void disable() { isReadyForUI = false; set_enabled(false); }
@@ -277,20 +279,22 @@ public:
       static inline void update_from_mpower() {
         if (isReadyForUI) power = upower_to_ocr(menuPower);
         unitPower = menuPower;
+
       }
     #endif
 
     #if ENABLED(LASER_FEATURE)
-      // Toggle the laser on/off with menuPower. Apply startup power is it was 0 on entry.
+      // Toggle the laser on/off with menuPower. Apply SPEED_POWER_STARTUP if it was 0 on entry.
       static inline void laser_menu_toggle(const bool state) {
+        set_enabled(state);
         if (state) {
           if (menuPower)
             power = cpwr_to_upwr(menuPower);
           else
             menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
-          update_from_mpower();
+        power = upower_to_ocr(menuPower);
+        apply_power(power);
         }
-        set_enabled(state);
       }
 
       /**
@@ -301,7 +305,6 @@ public:
       static inline void test_fire_pulse() {
         TERN_(USE_BEEPER, buzzer.tone(30, 3000));
         cutter_mode = CUTTER_MODE_STANDARD;// Menu needs standard mode.
-        update_from_mpower();              // Pull the power setting from menuPower
         laser_menu_toggle(true);           // Laser On
         delay(testPulse);                  // Delay for time set by user in pulse ms menu screen.
         laser_menu_toggle(false);          // Laser Off
@@ -321,11 +324,11 @@ public:
     }
 
     // Inline modes of all other functions; all enable planner inline power control
-    static inline void set_inline_enabled(const bool enable) { enable_state = enable; planner.laser_inline.status.isEnabled = enable; }
+    static inline void set_inline_enabled(const bool enable) { planner.laser_inline.status.isEnabled = enable;}
 
     // Set the power for subsequent movement blocks
     static void inline_power(const cutter_power_t cpwr) {
-      TERN(SPINDLE_LASER_USE_PWM, planner.laser_inline.power = cpwr, planner.laser_inline.power = cpwr > 0 ? 255 : 0);
+      TERN(SPINDLE_LASER_USE_PWM, power = planner.laser_inline.power = cpwr, planner.laser_inline.power = cpwr > 0 ? 255 : 0);
     }
 
   #endif // LASER_FEATURE

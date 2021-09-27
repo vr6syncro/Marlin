@@ -40,7 +40,7 @@
 
 SpindleLaser cutter;
 uint8_t SpindleLaser::power = 0;
-bool  SpindleLaser::enable_state = false;
+bool  SpindleLaser::enable_state = false;                             // Virtual enable state, controls enable pin if present and or apply power if > 0 
 uint8_t SpindleLaser::last_power_applied = 0;                         // Basic power state tracking
 
 #if ENABLED(LASER_FEATURE)
@@ -127,28 +127,32 @@ void SpindleLaser::init() {
  * @param opwr Power value. Range 0 to MAX. When 0 disable spindle/laser.
  */
 void SpindleLaser::apply_power(const uint8_t opwr) {
-  if (opwr == last_power_applied) return;
-  last_power_applied = opwr;
-  TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ApplyPwr: ", opwr));
-  #if ENABLED(SPINDLE_LASER_USE_PWM)
-    if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
-      ocr_off();
+  if (enabled()) { 
+    if (opwr == last_power_applied) return;
+      last_power_applied = opwr;
+      TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ApplyPwr: ", opwr));
+      #if ENABLED(SPINDLE_LASER_USE_PWM)
+        if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
+          ocr_off();
+        }
+        else if (ENABLED(CUTTER_POWER_RELATIVE) || enabled()) {
+          set_ocr(opwr);
+          isReadyForUI = true;
+        }
+        else {
+          ocr_off();
+        }
+      #elif ENABLED(SPINDLE_SERVO)
+        MOVE_SERVO(SPINDLE_SERVO_NR, power);
+      #else
+        WRITE(SPINDLE_LASER_ENA_PIN, enabled() ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
+        isReadyForUI = true;
+      #endif
+    } else {
+      WRITE(SPINDLE_LASER_ENA_PIN, enabled() ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
       isReadyForUI = false;
-    }
-    else if (ENABLED(CUTTER_POWER_RELATIVE) || enabled()) {
-      set_ocr(opwr);
-      isReadyForUI = true;
-    }
-    else {
       ocr_off();
-      isReadyForUI = false;
-    }
-  #elif ENABLED(SPINDLE_SERVO)
-    MOVE_SERVO(SPINDLE_SERVO_NR, power);
-  #else
-    WRITE(SPINDLE_LASER_ENA_PIN, enabled() ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
-    isReadyForUI = true;
-  #endif
+  }
 }
 
 #if ENABLED(SPINDLE_CHANGE_DIR)

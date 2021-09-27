@@ -99,24 +99,26 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   };
 
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode
+    planner.laser_inline.status.isPowered = true;                                                   // M3 or M4 is powered either way
     #if ENABLED(LASER_POWER_SYNC)
       // With power sync we only set power so it does not effect already queued inline power settings
       get_s_power();                                                                                // Update cutter.power if seen
-      planner.laser_inline.status.isPowered = true;                                                                             
-      TERN_(LASER_POWER_SYNC, planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR));                     // Send the flag, queueing cutter.power  
+      planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                              // Send the flag, queueing cutter.power  
     #else
-      TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("InlinePwr:get"));  
-      TERN_(LASER_FEATURE, cutter.inline_power(cutter.upower_to_ocr(get_s_power())));
+      TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:get"));
+      planner.synchronize();
+      cutter.set_enabled(true);
+      cutter.inline_power(cutter.upower_to_ocr(get_s_power()));
     #endif  
   }
   else {
-    #if ENABLED(SPINDLE_LASER_USE_PWM)
-      TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdPwr:get"));
-      cutter.apply_power(cutter.upower_to_ocr(get_s_power()));
-    #elif ENABLED(SPINDLE_SERVO)
-      cutter.apply_power(get_s_power());
+    cutter.set_enabled(true);
+    get_s_power();
+    TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("StdPwr:get"));
+    #if ENABLED(SPINDLE_SERVO)
+      cutter.apply_power(cutter.unitPower);
     #else
-      cutter.set_enabled(true);
+    cutter.apply_power(cutter.power);
     #endif
     TERN_(SPINDLE_CHANGE_DIR, cutter.set_reverse(is_M4));
   }
@@ -127,12 +129,12 @@ void GcodeSuite::M3_M4(const bool is_M4) {
  */
 void GcodeSuite::M5() {
   planner.synchronize();
+  cutter.apply_power(0);                        // M5 kills power in either mode but if it's in inline it will be still be the active mode
+  cutter.set_enabled(false);                    // Clear enable states based on current mode
   if (parser.seen('I')) {
-    cutter.set_enabled(false);                  // Clear inline mode flags
-    cutter.cutter_mode = CUTTER_MODE_STANDARD;  // Switch from inline to standard mode, has no effect on current power output!
+     cutter.cutter_mode = CUTTER_MODE_STANDARD;  // Switch from inline to standard mode, has no effect on current power output!
   }
   TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("M5Pwr:",0));
-  cutter.apply_power(0);                        // M5 kills power in either mode but if it's in inline it will be still be the active mode
 }
 
 #endif // HAS_CUTTER

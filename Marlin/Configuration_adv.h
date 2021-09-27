@@ -3432,8 +3432,8 @@
      * CUTTER_MODE_CONTINUOUS. The option allows M3 laser power to be commited without waiting 
      * for a planner syncronization    
      */ 
-    #define LASER_POWER_SYNC
-
+    //#define LASER_POWER_SYNC
+  
     /**
      * Scale the laser's power in proportion to the movement rate.
      *
@@ -3441,25 +3441,9 @@
      * - Ramps the power up every N steps to approximate the speed trapezoid.
      * - Due to the limited power resolution this is only approximate.
      */
-    //#define LASER_POWER_INLINE_TRAPEZOID
+    //#define LASER_POWER_TRAP
 
-    /**
-     * Continuously calculate the current power (nominal_power * current_rate / nominal_rate).
-     * Required for accurate power with non-trapezoidal acceleration (e.g., S_CURVE_ACCELERATION).
-     * This is a costly calculation so this option is discouraged on 8-bit AVR boards.
-     *
-     * LASER_POWER_INLINE_TRAPEZOID_CONT_PER defines how many step cycles there are between power updates. If your
-     * board isn't able to generate steps fast enough (and you are using LASER_POWER_INLINE_TRAPEZOID_CONT), increase this.
-     * Note that when this is zero it means it occurs every cycle; 1 means a delay wait one cycle then run, etc.
-     */
-    //#define LASER_POWER_INLINE_TRAPEZOID_CONT
 
-    /**
-     * Stepper iterations between power updates. Increase this value if the board
-     * can't keep up with the processing demands of LASER_POWER_INLINE_TRAPEZOID_CONT.
-     * Disable (or set to 0) to recalculate power on every stepper iteration.
-     */
-    //#define LASER_POWER_INLINE_TRAPEZOID_CONT_PER 10
 
     //
     // Laser I2C Ammeter (High precision INA226 low/high side module)

@@ -33,7 +33,7 @@
   #include "../../feature/spindle_laser.h"
 
   void menu_spindle_laser() {
-    bool is_enabled = cutter.enabled() && cutter.isReadyForUI;
+    bool is_enabled = cutter.enabled();
     #if ENABLED(SPINDLE_CHANGE_DIR)
       bool is_rev = cutter.is_reverse();
     #endif

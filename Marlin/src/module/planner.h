@@ -137,22 +137,20 @@ enum BlockFlag : char {
 #if ENABLED(LASER_FEATURE)
 
   typedef struct {
-    bool isEnabled:1;         // Set to engage the inline laser power output.
+    bool isEnabled:1;                                 // Set to engage the inline laser power output.
     bool dir:1;
-    bool isPowered:1;         // Set on any parsed G1, G2, G3, or G5 powered move, cleared on G0 and G28.
+    bool isPowered:1;                                 // Set on any parsed G1, G2, G3, or G5 powered move, cleared on G0 and G28.
     bool Reserved:6;
   } power_status_t;
 
   typedef struct {
-    power_status_t status;    // See planner settings for meaning
-    uint8_t power;            // Ditto; When in trapezoid mode this is nominal power
-    #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-      uint8_t   power_entry;  // Entry power for the laser
-      #if DISABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-        uint8_t   power_exit; // Exit power for the laser
-        uint32_t  entry_per,  // Steps per power increment (to avoid floats in stepper calcs)
-                  exit_per;   // Steps per power decrement
-      #endif
+    power_status_t status;                            // See planner settings for meaning
+    uint8_t power;                                    // Ditto; When in trapezoid mode this is nominal power
+
+    #if ENABLED(LASER_POWER_TRAP)
+      float trap_ramp_active_pwr;                     // Laser power level during active trapezoid smoothing 
+      float trap_ramp_entry_incr;                     // Acceleration per step laser power increment (trap entry)
+      float trap_ramp_exit_decr;                      // Deceleration per step laser power decrement (trap exit)
     #endif
   } block_laser_t;
 

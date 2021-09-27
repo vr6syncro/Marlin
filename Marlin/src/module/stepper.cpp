@@ -243,20 +243,6 @@ xyz_long_t Stepper::endstops_trigsteps;
 xyze_long_t Stepper::count_position{0};
 xyze_int8_t Stepper::count_direction{0};
 
-#if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-  Stepper::stepper_laser_t Stepper::laser_trap = {
-    .enabled = false,
-    .cur_power = 0,
-    .cruise_set = false,
-    #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-      .till_update = 0
-    #else
-      .last_step_count = 0,
-      .acc_step_count = 0
-    #endif
-  };
-#endif
-
 #define MINDIR(A) (count_direction[_AXIS(A)] < 0)
 #define MAXDIR(A) (count_direction[_AXIS(A)] > 0)
 
@@ -1847,7 +1833,6 @@ uint32_t Stepper::block_phase_isr() {
 
   // If there is a current block
   if (current_block) {
-
     // If current block is finished, reset pointer and finalize state
     if (step_events_completed >= step_event_count) {
       #if ENABLED(DIRECT_STEPPING)
@@ -1870,7 +1855,7 @@ uint32_t Stepper::block_phase_isr() {
       TERN_(HAS_FILAMENT_RUNOUT_DISTANCE, runout.block_completed(current_block));
       discard_current_block();
     }
-    else {
+    else {     
       // Step events not completed yet...
 
       // Are we in acceleration phase ?
@@ -1901,36 +1886,14 @@ uint32_t Stepper::block_phase_isr() {
         #endif
 
         // Update laser - Accelerating
-        #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
+        #if ENABLED(LASER_POWER_TRAP)
           if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-            if (laser_trap.enabled) {
-              #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-                if (laser_trap.till_update)
-                  laser_trap.till_update--;
-                else {
-                  laser_trap.till_update = LASER_POWER_INLINE_TRAPEZOID_CONT_PER;
-                  laser_trap.cur_power = (current_block->laser.power * acc_step_rate) / current_block->nominal_rate;
-                  TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ATrapPerPwr:",laser_trap.cur_power));
-                  cutter.apply_power(laser_trap.cur_power); // Cycle efficiency is irrelevant it the last line was many cycles
-                }
-              #else
-                if (current_block->laser.entry_per) {
-                  laser_trap.acc_step_count -= step_events_completed - laser_trap.last_step_count;
-                  laser_trap.last_step_count = step_events_completed;
-
-                  // Should be faster than a divide, since this should trip just once
-                  if (laser_trap.acc_step_count < 0) {
-                    while (laser_trap.acc_step_count < 0) {
-                      laser_trap.acc_step_count += current_block->laser.entry_per;
-                      if (laser_trap.cur_power < current_block->laser.power) laser_trap.cur_power++;
-                    }
-                    TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ATrapPwr:",laser_trap.cur_power));
-                    cutter.apply_power(laser_trap.cur_power);
-                  }
-                }
-              #endif
+            if (planner.laser_inline.status.isPowered) {   
+              cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
+              current_block->laser.trap_ramp_active_pwr += current_block->laser.trap_ramp_entry_incr;
+              TERN_(DEBUG_LASER_RAMP, SERIAL_ECHO_MSG("ARampPwr:",current_block->laser.trap_ramp_active_pwr));
             }
-          }
+          }  
         #endif
       }
       // Are we in Deceleration phase ?
@@ -1982,35 +1945,16 @@ uint32_t Stepper::block_phase_isr() {
         #endif // LIN_ADVANCE
 
         // Update laser - Decelerating
-        #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-          if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS && laser_trap.enabled) {
-            #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-              if (laser_trap.till_update)
-                laser_trap.till_update--;
-              else {
-                laser_trap.till_update = LASER_POWER_INLINE_TRAPEZOID_CONT_PER;
-                laser_trap.cur_power = (current_block->laser.power * step_rate) / current_block->nominal_rate;
-                TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("DTrapPwr:",laser_trap.cur_power));                
-                cutter.apply_power(laser_trap.cur_power); // Cycle efficiency isn't relevant when the last line was many cycles
-              }
-            #else
-              if (current_block->laser.exit_per) {
-                laser_trap.acc_step_count -= step_events_completed - laser_trap.last_step_count;
-                laser_trap.last_step_count = step_events_completed;
+        #if ENABLED(LASER_POWER_TRAP)
+          if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
+            if (planner.laser_inline.status.isPowered) {
+              cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
+              current_block->laser.trap_ramp_active_pwr -= current_block->laser.trap_ramp_exit_decr;
+              TERN_(DEBUG_LASER_RAMP, SERIAL_ECHO_MSG("DRampPwr:",current_block->laser.trap_ramp_active_pwr));
+            }
+          }  
+        #endif 
 
-                // Should be faster than a divide, since this should trip just once
-                if (laser_trap.acc_step_count < 0) {
-                  while (laser_trap.acc_step_count < 0) {
-                    laser_trap.acc_step_count += current_block->laser.exit_per;
-                    if (laser_trap.cur_power > current_block->laser.power_exit) laser_trap.cur_power--;
-                  }
-                  TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("DTrapPwr:",laser_trap.cur_power));                  
-                  cutter.apply_power(laser_trap.cur_power);
-                }
-              }
-            #endif
-          }
-        #endif // LASER_POWER_INLINE_TRAPEZOID
       }
       else {  // Must be in cruise phase otherwise
 
@@ -2028,24 +1972,18 @@ uint32_t Stepper::block_phase_isr() {
         // The timer interval is just the nominal value for the nominal speed
         interval = ticks_nominal;
 
-        // Update laser - Cruising
-        #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
+        // Update laser - Cruising - Fire it once to ensure we use the actual and not a trap step calculated one.  
+        #if ENABLED(LASER_POWER_TRAP)
           if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-            if (laser_trap.enabled) {
-              if (!laser_trap.cruise_set) {
-                laser_trap.cur_power = current_block->laser.power;
+            if (planner.laser_inline.status.isPowered) {
+              if (current_block->accelerate_until + 1 == step_events_completed) {
+                cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
                 TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("CTrapPwr:",laser_trap.cur_power));
-                cutter.apply_power(laser_trap.cur_power);
-                laser_trap.cruise_set = true;
               }
-              #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-                laser_trap.till_update = LASER_POWER_INLINE_TRAPEZOID_CONT_PER;
-              #else
-                laser_trap.last_step_count = step_events_completed;
-              #endif
             }
           }
         #endif
+
       }
     }
 
@@ -2281,26 +2219,15 @@ uint32_t Stepper::block_phase_isr() {
 
       #if ENABLED(LASER_FEATURE)
         if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {           // Planner controls the laser
-          const power_status_t stat = current_block->laser.status;
-          if (stat.isEnabled) {
-            #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-              laser_trap.enabled = true;
-              laser_trap.cur_power = current_block->laser.power_entry;  // RESET STATE
-              laser_trap.cruise_set = false;
-              #if ENABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-                laser_trap.till_update = 0;
-              #else
-                laser_trap.last_step_count = 0;
-                laser_trap.acc_step_count = current_block->laser.entry_per / 2;
-              #endif
-              // Always have PWM in this case
-              TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("TrapPwr:",laser_trap.cur_power));              
-              cutter.apply_power(stat.isPowered ? laser_trap.cur_power : 0 ); // ON with power or OFF
-            #else
-              TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("InlinePwr:",current_block->laser.power));
-              cutter.apply_power(stat.isPowered ? TERN(SPINDLE_LASER_USE_PWM, current_block->laser.power, current_block->laser.power > 0 ? 255 : 0) : 0);
-            #endif
-          }
+          #if ENABLED(LASER_POWER_TRAP)                               
+          // Skip it, trapeziod smoothing done with accel/decel/cruise
+          #else
+            const power_status_t stat = current_block->laser.status;
+            if (stat.isEnabled) {
+                TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:",current_block->laser.power));
+                cutter.apply_power(stat.isPowered ? current_block->laser.power : 0);
+            }
+          #endif 
         }
       #endif // LASER_FEATURE
 

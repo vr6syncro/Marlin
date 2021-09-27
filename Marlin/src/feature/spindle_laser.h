@@ -109,6 +109,7 @@ public:
   #endif
 
   static bool isReadyForUI;               // Ready to apply power setting from the UI to OCR
+  static bool enable_state;
   static uint8_t power;
 
   #if ENABLED(MARLIN_DEV_MODE)
@@ -126,7 +127,7 @@ public:
 
   // Modifying this function should update everywhere
   static inline bool enabled(const cutter_power_t opwr) { return opwr > 0; }
-  static inline bool enabled() { return enabled(power); }
+  static inline bool enabled() { return enabled(enable_state); }
 
   static void apply_power(const uint8_t inpow);
 
@@ -207,13 +208,16 @@ public:
       case CUTTER_MODE_STANDARD:
         TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdEnaPwr:"));
         apply_power(enable ? TERN(SPINDLE_LASER_USE_PWM, (power ?: (unitPower ? upower_to_ocr(cpwr_to_upwr(SPEED_POWER_STARTUP)) : 0)), 255) : 0);
+        enable_state = true;
         break;
       case CUTTER_MODE_CONTINUOUS:
+        TERN_(LASER_FEATURE, set_inline_enabled(enable));
       case CUTTER_MODE_DYNAMIC:
         TERN_(LASER_FEATURE, set_inline_enabled(enable));
-        // fallthru
+        break;
       case CUTTER_MODE_ERROR: // Error mode, no enable and kill power.
         TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ErrEnaPwr:", 0));
+        set_enabled(false);
         apply_power(0);
     }
   }
@@ -317,7 +321,7 @@ public:
     }
 
     // Inline modes of all other functions; all enable planner inline power control
-    static inline void set_inline_enabled(const bool enable) { planner.laser_inline.status.isEnabled = enable; }
+    static inline void set_inline_enabled(const bool enable) { enable_state = enable; planner.laser_inline.status.isEnabled = enable; }
 
     // Set the power for subsequent movement blocks
     static void inline_power(const cutter_power_t cpwr) {

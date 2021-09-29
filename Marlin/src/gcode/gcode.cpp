@@ -227,7 +227,8 @@ void GcodeSuite::get_destination_from_command() {
       }
       else if (parser.codenum == 0) {
         planner.laser_inline.status.isPowered = false; // For dynamic mode we need to flag it off
-        planner.laser_inline.power = 0;                // This is planner-based so only set power and do not disable inline control flags.
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("G0Pwr:",0));
+         cutter.inline_power(0);                      // This is planner-based so only set power and do not disable inline control flags.
       }
     }
   #endif // LASER_FEATURE

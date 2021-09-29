@@ -1350,7 +1350,7 @@ void Planner::check_axes_activity() {
   else {
 
     TERN_(HAS_CUTTER, if (cutter.cutter_mode == CUTTER_MODE_STANDARD) cutter.refresh());
-
+    
     #if HAS_TAIL_FAN_SPEED
       FANS_LOOP(i) tail_fan_speed[i] = thermalManager.scaledFanSpeed(i);
     #endif
@@ -1980,7 +1980,6 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
       laser_inline.power = cutter.calc_dynamic_power();
       block->laser.power = laser_inline.power;
     } 
-
   #endif
 
   // Number of steps for each axis

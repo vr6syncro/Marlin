@@ -99,17 +99,19 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   };
 
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode
-    planner.laser_inline.status.isPowered = true;                                                   // M3 or M4 is powered either way
-    #if ENABLED(LASER_POWER_SYNC)
-      // With power sync we only set power so it does not effect already queued inline power settings
-      get_s_power();                                                                                // Update cutter.power if seen
-      planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                              // Send the flag, queueing cutter.power  
-    #else
-      TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:get"));
-      planner.synchronize();
-      cutter.set_enabled(true);
-      cutter.inline_power(cutter.upower_to_ocr(get_s_power()));
-    #endif  
+    #if ENABLED(LASER_FEATURE)
+      planner.laser_inline.status.isPowered = true;                                                   // M3 or M4 is powered either way
+      #if ENABLED(LASER_POWER_SYNC)
+        // With power sync we only set power so it does not effect already queued inline power settings
+        get_s_power();                                                                              // Update cutter.power if seen
+        planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                            // Send the flag, queueing cutter.power  
+      #else
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:get"));
+        planner.synchronize();
+        cutter.set_enabled(true);
+        cutter.inline_power(cutter.upower_to_ocr(get_s_power()));
+      #endif
+    #endif    
   }
   else {
     cutter.set_enabled(true);

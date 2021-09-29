@@ -40,10 +40,6 @@
 #define PCT_TO_PWM(X) ((X) * 255 / 100)
 #define PCT_TO_SERVO(X) ((X) * 180 / 100)
 
-#ifndef SPEED_POWER_INTERCEPT
-  #define SPEED_POWER_INTERCEPT 0
-#endif
-
 // Laser/Cutter operation mode
 enum CutterMode : int8_t {
   CUTTER_MODE_ERROR = -1,

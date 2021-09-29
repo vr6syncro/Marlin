@@ -134,6 +134,7 @@ planner_settings_t Planner::settings;           // Initialized by settings.load(
 
 #if ENABLED(LASER_FEATURE)
   laser_state_t Planner::laser_inline;          // Current state for blocks
+  const uint8_t laser_power_floor = cutter.pct_to_ocr(SPEED_POWER_MIN); 
 #endif
 
 uint32_t Planner::max_acceleration_steps_per_s2[DISTINCT_AXES]; // (steps/s^2) Derived from mm_per_s2
@@ -848,13 +849,13 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
 
   #if ENABLED(LASER_POWER_TRAP)
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-    if (block->laser.power > 0) { // No need to care if power == 0 
-      block->laser.trap_ramp_active_pwr = block->laser.power * (initial_rate / float(block->nominal_rate));
+    if (block->laser.power >= laser_power_floor) { // No need to care if power < minimum 
+      block->laser.trap_ramp_active_pwr = (block->laser.power - laser_power_floor) * (initial_rate / float(block->nominal_rate)) + laser_power_floor;
       block->laser.trap_ramp_entry_incr = (block->laser.power - block->laser.trap_ramp_active_pwr) / accelerate_steps;
       float laser_pwr = block->laser.power * (final_rate / float(block->nominal_rate));
-      block->laser.trap_ramp_exit_decr = (block->laser.power - laser_pwr ) / decelerate_steps;
+      block->laser.trap_ramp_exit_decr = (block->laser.power - laser_power_floor - laser_pwr) / decelerate_steps;
 
-      #if ENABLED(DEBUG_LASER_RAMP)
+      #if ENABLED(DEBUG_LASER_TRAP)
         SERIAL_ECHO_MSG("lp:",block->laser.power);
         SERIAL_ECHO_MSG("as:",accelerate_steps);
         SERIAL_ECHO_MSG("ds:",decelerate_steps);

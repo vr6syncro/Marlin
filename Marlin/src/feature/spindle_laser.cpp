@@ -127,16 +127,19 @@ void SpindleLaser::init() {
  * @param opwr Power value. Range 0 to MAX. When 0 disable spindle/laser.
  */
 void SpindleLaser::apply_power(const uint8_t opwr) {
-  if (enabled()) { 
-    if (opwr == last_power_applied) return;
-      last_power_applied = opwr;
-      TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ApplyPwr: ", opwr));
+  if (enabled()) {
+    uint8_t pwr = cutter.pct_to_ocr(SPEED_POWER_MIN);
+    pwr = (opwr > pwr ? opwr : pwr); 
+    if (pwr == last_power_applied) return;
+      last_power_applied = pwr;
+      TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("ApplyPwr: ", pwr));
+      TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("ApplyPwr: ", pwr));
       #if ENABLED(SPINDLE_LASER_USE_PWM)
         if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
           ocr_off();
         }
         else if (ENABLED(CUTTER_POWER_RELATIVE) || enabled()) {
-          set_ocr(opwr);
+          set_ocr(pwr);
           isReadyForUI = true;
         }
         else {

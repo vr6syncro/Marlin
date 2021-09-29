@@ -134,7 +134,7 @@ void GcodeSuite::M5() {
   if (parser.seen('I')) {
      cutter.cutter_mode = CUTTER_MODE_STANDARD;  // Switch from inline to standard mode, has no effect on current power output!
   }
-  TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("M5Pwr:",0));
+  TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("M5Pwr:",0));
 }
 
 #endif // HAS_CUTTER

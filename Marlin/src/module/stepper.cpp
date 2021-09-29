@@ -1888,16 +1888,16 @@ uint32_t Stepper::block_phase_isr() {
         // Update laser - Accelerating
         #if ENABLED(LASER_POWER_TRAP)
           if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-            if (planner.laser_inline.status.isPowered) {   
+            if (planner.laser_inline.status.isPowered) {
+              TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("ATrapPwr:",current_block->laser.trap_ramp_active_pwr));   
               cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
               current_block->laser.trap_ramp_active_pwr += current_block->laser.trap_ramp_entry_incr;
-              TERN_(DEBUG_LASER_RAMP, SERIAL_ECHO_MSG("ARampPwr:",current_block->laser.trap_ramp_active_pwr));
             }
           }  
         #endif
       }
       // Are we in Deceleration phase ?
-      else if (step_events_completed >= decelerate_after) {
+      else if (step_events_completed > decelerate_after) {
         uint32_t step_rate;
 
         #if ENABLED(S_CURVE_ACCELERATION)
@@ -1948,9 +1948,9 @@ uint32_t Stepper::block_phase_isr() {
         #if ENABLED(LASER_POWER_TRAP)
           if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
             if (planner.laser_inline.status.isPowered) {
-              cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
               current_block->laser.trap_ramp_active_pwr -= current_block->laser.trap_ramp_exit_decr;
-              TERN_(DEBUG_LASER_RAMP, SERIAL_ECHO_MSG("DRampPwr:",current_block->laser.trap_ramp_active_pwr));
+              TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("DTrapPwr:",current_block->laser.trap_ramp_active_pwr));
+              cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
             }
           }  
         #endif 
@@ -1971,21 +1971,20 @@ uint32_t Stepper::block_phase_isr() {
 
         // The timer interval is just the nominal value for the nominal speed
         interval = ticks_nominal;
+      }
 
-        // Update laser - Cruising - Fire it once to ensure we use the actual and not a trap step calculated one.  
-        #if ENABLED(LASER_POWER_TRAP)
-          if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
+      // Update laser - Cruise
+      #if ENABLED(LASER_POWER_TRAP)
+        if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
+          if (step_events_completed + 1 == accelerate_until) {
             if (planner.laser_inline.status.isPowered) {
-              if (current_block->accelerate_until + 1 == step_events_completed) {
-                cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
-                TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("CTrapPwr:",laser_trap.cur_power));
-              }
+              TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("CTrapPwr:",current_block->laser.power));   
+              cutter.apply_power(current_block->laser.power);
             }
           }
-        #endif
-
-      }
-    }
+        }  
+      #endif
+    }    
 
     #if ENABLED(LASER_FEATURE)
       // Super-fast method to dynamically adjust the laser power OCR value based on the input feedrate in mm-per-minute.
@@ -1995,7 +1994,7 @@ uint32_t Stepper::block_phase_isr() {
         && planner.laser_inline.status.isPowered                  // isPowered flag set on any parsed G1, G2, G3, or G5 move; cleared on any others.
         && cutter.last_block_power != current_block->laser.power  // Prevent constant update without change
       ) {
-        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("DynaPwr: ", current_block->laser.power));
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("DynaPwr: ", current_block->laser.power));
         cutter.apply_power(current_block->laser.power);
         cutter.last_block_power = current_block->laser.power;
 
@@ -2005,7 +2004,7 @@ uint32_t Stepper::block_phase_isr() {
   else { // !current_block
     #if ENABLED(LASER_FEATURE)
       if (cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {
-        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("DynaPwr: ", 0));
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("DynaPwr: ", 0));
         cutter.apply_power(0);  // No movement in dynamic mode so turn Laser off
       }
     #endif
@@ -2032,7 +2031,7 @@ uint32_t Stepper::block_phase_isr() {
         if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
           is_sync_pwr = TEST(current_block->flag, BLOCK_BIT_LASER_PWR);
           if (is_sync_pwr) {
-            TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("SyncPwr:", current_block->laser.power));
+            TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("SyncPwr:", current_block->laser.power));
             cutter.apply_power(current_block->laser.power);
           }
         }
@@ -2050,7 +2049,7 @@ uint32_t Stepper::block_phase_isr() {
       // For non-inline cutter, grossly apply power
       #if HAS_CUTTER
         if (cutter.cutter_mode == CUTTER_MODE_STANDARD) {
-          TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdPwr:", current_block->cutter_power));
+          TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("StdPwr:", current_block->cutter_power));
           cutter.apply_power(current_block->cutter_power);
         }
       #endif

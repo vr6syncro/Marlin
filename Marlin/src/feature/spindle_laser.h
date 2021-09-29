@@ -206,7 +206,7 @@ public:
   static inline void set_enabled(const bool enable) {
     switch (cutter_mode) {
       case CUTTER_MODE_STANDARD:
-        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("StdEnaPwr:"));
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("StdEnaPwr:"));
         apply_power(enable ? TERN(SPINDLE_LASER_USE_PWM, (power ?: (unitPower ? upower_to_ocr(cpwr_to_upwr(SPEED_POWER_STARTUP)) : 0)), 255) : 0);
         break;
       case CUTTER_MODE_CONTINUOUS:
@@ -216,7 +216,7 @@ public:
         TERN_(LASER_FEATURE, set_inline_enabled(enable));
         break;
       case CUTTER_MODE_ERROR: // Error mode, no enable and kill power.
-        TERN_(CUTTER_DEBUG, SERIAL_ECHO_MSG("ErrEnaPwr:", 0));
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("ErrEnaPwr:", 0));
         enable_state = false;
         apply_power(0);
     }

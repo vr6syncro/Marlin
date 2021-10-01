@@ -75,15 +75,21 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
     planner.synchronize();   // Wait for previous movement commands (G0/G1/G2/G3) to complete before changing power
 
-  if (parser.seen('I')) {
-    cutter.cutter_mode = is_M4 ? CUTTER_MODE_DYNAMIC : CUTTER_MODE_CONTINUOUS;
-    cutter.set_enabled(true);
-    return;
-  }
+  #if ENABLED(LASER_FEATURE)
+    if (parser.seen('I')) {
+      cutter.cutter_mode = is_M4 ? CUTTER_MODE_DYNAMIC : CUTTER_MODE_CONTINUOUS;
+      cutter.inline_power(0);
+      cutter.set_enabled(true);
+    }
+  #endif  
 
   auto get_s_power = [] {
     if (parser.seen('S')) {
-      cutter.unitPower = cutter.power_to_range(parser.value_float());
+      #if ENABLED(LASER_POWER_TRAP)
+        cutter.unitPower = parser.value_float();
+      #else
+        cutter.unitPower = cutter.power_to_range(parser.value_float())
+      #endif
       // PWM implied and ranges from S0 to S180 for a positional servo. Typical use would be a pen up/down function.
       #if ENABLED(SPINDLE_SERVO)
         cutter.power = upower_to_ocr(cutter.unitPower);
@@ -101,16 +107,14 @@ void GcodeSuite::M3_M4(const bool is_M4) {
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode
     #if ENABLED(LASER_FEATURE)
       planner.laser_inline.status.isPowered = true;                                                 // M3 or M4 is powered either way
+      get_s_power();                                                                                // Update cutter.power if seen
       #if ENABLED(LASER_POWER_SYNC)
-        // With power sync we only set power so it does not effect already queued inline power settings
-        get_s_power();                                                                              // Update cutter.power if seen
-        planner.laser_inline.power = cutter.power;
+        // With power sync we only set power so it does not effect already queued inline power setting                                                                  
         planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                            // Send the flag, queueing inline power
       #else
         TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:get"));
         planner.synchronize();
-        cutter.set_enabled(true);
-        cutter.inline_power(cutter.upower_to_ocr(get_s_power()));
+        cutter.inline_power(cutter.power);
       #endif
     #endif
   }
@@ -121,7 +125,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
     #if ENABLED(SPINDLE_SERVO)
       cutter.apply_power(cutter.unitPower);
     #else
-    cutter.apply_power(cutter.power);
+      cutter.apply_power(cutter.power);
     #endif
     TERN_(SPINDLE_CHANGE_DIR, cutter.set_reverse(is_M4));
   }
@@ -132,12 +136,17 @@ void GcodeSuite::M3_M4(const bool is_M4) {
  */
 void GcodeSuite::M5() {
   planner.synchronize();
-  cutter.apply_power(0);                        // M5 kills power in either mode but if it's in inline it will be still be the active mode
-  cutter.set_enabled(false);                    // Clear enable states based on current mode
-  if (parser.seen('I')) {
-     cutter.cutter_mode = CUTTER_MODE_STANDARD;  // Switch from inline to standard mode, has no effect on current power output!
+  cutter.power = 0;
+  TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("M5Pwr:",cutter.power));
+  cutter.apply_power(cutter.power);             // M5 kills power in either mode but if it's in inline it will be still be the active mode.
+  if (cutter.cutter_mode != CUTTER_MODE_STANDARD) {   
+    if (parser.seen('I')) {
+      TERN_(LASER_FEATURE, cutter.inline_power(cutter.power));
+      cutter.set_enabled(false);                  // Needs to happen while we are in inline mode to clear inline power.
+      cutter.cutter_mode = CUTTER_MODE_STANDARD;  // Switch from inline to standard mode.
+    }
   }
-  TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("M5Pwr:",0));
+  cutter.set_enabled(false);                      // Disable enable output setting
 }
 
 #endif // HAS_CUTTER

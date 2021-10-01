@@ -220,17 +220,28 @@ void GcodeSuite::get_destination_from_command() {
       if (WITHIN(parser.codenum, 1, TERN(ARC_SUPPORT, 3, 1)) || TERN0(BEZIER_CURVE_SUPPORT, parser.codenum == 5)) {
         planner.laser_inline.status.isPowered = true;
         if (parser.seen('S')) {
-          cutter.unitPower = cutter.power_to_range(parser.value_float());
+          #if ENABLED(LASER_POWER_TRAP)
+            cutter.unitPower = parser.value_float();
+          #else
+            cutter.unitPower = cutter.power_to_range(parser.value_float())
+          #endif
           cutter.inline_power(cutter.upower_to_ocr(cutter.unitPower));
           cutter.menuPower = cutter.unitPower;
         }
       }
       else if (parser.codenum == 0) {
-        planner.laser_inline.status.isPowered = false; // For dynamic mode we need to flag it off
+        // For dynamic mode we need to flag it off
+        if (cutter.cutter_mode == CUTTER_MODE_DYNAMIC)  planner.laser_inline.status.isPowered = false;
         TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("G0Pwr:",0));
-         cutter.inline_power(0);                      // This is planner-based so only set power and do not disable inline control flags.
+        cutter.inline_power(0); // This is planner-based so only set power and do not disable inline control flags.
+      }
+    } else {
+      if (parser.codenum == 0) {
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("G0StdPwr:",0));
+        cutter.apply_power(0);
       }
     }
+
   #endif // LASER_FEATURE
 }
 

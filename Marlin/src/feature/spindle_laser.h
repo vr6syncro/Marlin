@@ -122,7 +122,6 @@ public:
   #endif
 
   // Modifying this function should update everywhere
-  //static inline bool enabled(const cutter_power_t opwr) { return opwr > 0; }
   static inline bool enabled() { return enable_state; }
 
   static void apply_power(const uint8_t inpow);
@@ -216,8 +215,10 @@ public:
         enable_state = false;
         apply_power(0);
     }
-        TERN_(SPINDLE_LASER_ENA_PIN, WRITE(SPINDLE_LASER_ENA_PIN, enable ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE));
-        enable_state = enable;
+    #if SPINDLE_LASER_ENA_PIN
+      WRITE(SPINDLE_LASER_ENA_PIN, enable ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
+    #endif  
+    enable_state = enable;
   }
 
   static inline void disable() { isReadyForUI = false; set_enabled(false); }
@@ -289,6 +290,7 @@ public:
           else
             menuPower = cpwr_to_upwr(SPEED_POWER_STARTUP);
         power = upower_to_ocr(menuPower);
+        TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("MenuPwr:", power));
         apply_power(power);
         }
       }

@@ -847,26 +847,34 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
    * Note this may behave unreliably when running with S_CURVE_ACCELERATION TBD until testing is complete
    */
 
-  #if ENABLED(LASER_POWER_TRAP)
+#if ENABLED(LASER_POWER_TRAP)
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
     if (planner.laser_inline.status.isPowered && planner.laser_inline.status.isEnabled) { 
-      block->laser.trap_ramp_active_pwr = (block->laser.power - laser_power_floor) * (initial_rate / float(block->nominal_rate)) + laser_power_floor;
-      block->laser.trap_ramp_entry_incr = (block->laser.power - block->laser.trap_ramp_active_pwr) / accelerate_steps;
-      float laser_pwr = block->laser.power * (final_rate / float(block->nominal_rate));
-      block->laser.trap_ramp_exit_decr = (block->laser.power - laser_power_floor - laser_pwr ) / decelerate_steps;
+      if (block->laser.power > 0) {
+        NOLESS(block->laser.power, laser_power_floor); 
+        block->laser.trap_ramp_active_pwr = (block->laser.power - laser_power_floor) * (initial_rate / float(block->nominal_rate)) + laser_power_floor;
+        block->laser.trap_ramp_entry_incr = (block->laser.power - block->laser.trap_ramp_active_pwr) / accelerate_steps;
+        float laser_pwr = block->laser.power * (final_rate / float(block->nominal_rate));
+        NOLESS(laser_pwr, laser_power_floor);
+        block->laser.trap_ramp_exit_decr = (block->laser.power - laser_pwr) / decelerate_steps;
 
-      #if ENABLED(DEBUG_LASER_TRAP)
-        SERIAL_ECHO_MSG("lp:",block->laser.power);
-        SERIAL_ECHO_MSG("as:",accelerate_steps);
-        SERIAL_ECHO_MSG("ds:",decelerate_steps);
-        SERIAL_ECHO_MSG("p.trap:",block->laser.trap_ramp_active_pwr);      
-        SERIAL_ECHO_MSG("p.incr:",block->laser.trap_ramp_entry_incr);
-        SERIAL_ECHO_MSG("p.decr:",block->laser.trap_ramp_exit_decr);
-      #endif
+        #if ENABLED(DEBUG_LASER_TRAP)
+          SERIAL_ECHO_MSG("lp:",block->laser.power);
+          SERIAL_ECHO_MSG("as:",accelerate_steps);
+          SERIAL_ECHO_MSG("ds:",decelerate_steps);
+          SERIAL_ECHO_MSG("p.trap:",block->laser.trap_ramp_active_pwr);      
+          SERIAL_ECHO_MSG("p.incr:",block->laser.trap_ramp_entry_incr);
+          SERIAL_ECHO_MSG("p.decr:",block->laser.trap_ramp_exit_decr);
+        #endif
+      } else {
+        block->laser.trap_ramp_active_pwr = 0;      
+        block->laser.trap_ramp_entry_incr = 0;
+        block->laser.trap_ramp_exit_decr = 0;
+      }
+
     }  
   }
   #endif  
-
 }
 
 /*                            PLANNER SPEED DEFINITION
@@ -2852,7 +2860,7 @@ void Planner::buffer_sync_block(uint8_t sync_flag) {
     FANS_LOOP(i) block->fan_speed[i] = thermalManager.fan_speed[i];
   #endif
 
-  TERN_(LASER_POWER_SYNC, block->laser.power = laser_inline.power);
+  TERN_(LASER_POWER_SYNC, block->laser.power = cutter.power);
 
   // If this is the first added movement, reload the delay, otherwise, cancel it.
   if (block_buffer_head == block_buffer_tail) {

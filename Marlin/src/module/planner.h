@@ -142,6 +142,7 @@ enum BlockFlag : char {
     bool isEnabled:1;                                 // Set to engage the inline laser power output.
     bool dir:1;
     bool isPowered:1;                                 // Set on any parsed G1, G2, G3, or G5 powered move, cleared on G0 and G28.
+    bool isSyncPower:1;                               // Set on a M3 sync based set laser power, used to determine active trap power 
     bool Reserved:6;
   } power_status_t;
 
@@ -273,7 +274,7 @@ typedef struct block_t {
      * Using OCR instead of raw power, because it avoids
      * floating point operations during the move loop.
      */
-    uint8_t power;
+    volatile uint8_t power;
   } laser_state_t;
 #endif
 

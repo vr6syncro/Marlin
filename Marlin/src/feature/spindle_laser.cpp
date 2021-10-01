@@ -120,41 +120,41 @@ void SpindleLaser::init() {
 #endif // SPINDLE_LASER_USE_PWM
 
 /**
- * Apply power for laser/spindle
+ * Apply power for laser/spindle/servo
  *
  * Apply cutter power value for PWM, Servo, and on/off pin.
  *
- * @param opwr Power value. Range 0 to MAX. When 0 disable spindle/laser.
+ * @param opwr Power value. Range 0 to MAX. 
  */
 void SpindleLaser::apply_power(const uint8_t opwr) {
-  if (enabled()) {
-    uint8_t pwr = cutter.pct_to_ocr(SPEED_POWER_MIN);
-    pwr = (opwr > pwr ? opwr : pwr); 
-    if (pwr == last_power_applied) return;
-      last_power_applied = pwr;
-      TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("ApplyPwr: ", pwr));
-      TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("ApplyPwr: ", pwr));
-      #if ENABLED(SPINDLE_LASER_USE_PWM)
-        if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
-          ocr_off();
-        }
-        else if (ENABLED(CUTTER_POWER_RELATIVE) || enabled()) {
-          set_ocr(pwr);
-          isReadyForUI = true;
-        }
-        else {
-          ocr_off();
-        }
-      #elif ENABLED(SPINDLE_SERVO)
-        MOVE_SERVO(SPINDLE_SERVO_NR, power);
-      #else
-        WRITE(SPINDLE_LASER_ENA_PIN, enabled() ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
+  if (enabled() || opwr == 0) {                                   // 0 allows a disable where no ENA pin exists  
+    if (opwr == last_power_applied) return;
+    last_power_applied = opwr;
+    TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("ApplyPwr: ", opwr));
+    TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("ApplyPwr: ", opwr));
+    #if ENABLED(SPINDLE_LASER_USE_PWM)
+      if (CUTTER_UNIT_IS(RPM) && unitPower == 0) {
+        ocr_off();
+      }
+      else if (ENABLED(CUTTER_POWER_RELATIVE) || enabled() || (opwr == 0)) {
+        set_ocr(opwr);
         isReadyForUI = true;
-      #endif
-    } else {
+      }
+      else {
+        ocr_off();
+      }
+    #elif ENABLED(SPINDLE_SERVO)
+      MOVE_SERVO(SPINDLE_SERVO_NR, power);
+    #else
       WRITE(SPINDLE_LASER_ENA_PIN, enabled() ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
-      isReadyForUI = false;
-      ocr_off();
+      isReadyForUI = true;
+    #endif
+  } else {
+    #if SPINDLE_LASER_ENA_PIN
+      WRITE(SPINDLE_LASER_ENA_PIN, 0 ? SPINDLE_LASER_ACTIVE_STATE : !SPINDLE_LASER_ACTIVE_STATE);
+    #endif
+    isReadyForUI = false;
+    ocr_off();
   }
 }
 

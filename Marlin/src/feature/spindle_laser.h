@@ -323,7 +323,7 @@ public:
     static inline void set_inline_enabled(const bool enable) { planner.laser_inline.status.isEnabled = enable;}
 
     // Set the power for subsequent movement blocks
-    static void inline_power(const cutter_power_t cpwr) {
+    static inline void inline_power(const cutter_power_t cpwr) {
       TERN(SPINDLE_LASER_USE_PWM, power = planner.laser_inline.power = cpwr, planner.laser_inline.power = cpwr > 0 ? 255 : 0);
     }
 

@@ -849,11 +849,11 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
 
   #if ENABLED(LASER_POWER_TRAP)
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-    if (block->laser.power >= laser_power_floor) { // No need to care if power < minimum 
+    if (planner.laser_inline.status.isPowered) { 
       block->laser.trap_ramp_active_pwr = (block->laser.power - laser_power_floor) * (initial_rate / float(block->nominal_rate)) + laser_power_floor;
       block->laser.trap_ramp_entry_incr = (block->laser.power - block->laser.trap_ramp_active_pwr) / accelerate_steps;
       float laser_pwr = block->laser.power * (final_rate / float(block->nominal_rate));
-      block->laser.trap_ramp_exit_decr = (block->laser.power - laser_power_floor - laser_pwr) / decelerate_steps;
+      block->laser.trap_ramp_exit_decr = (block->laser.power - laser_power_floor - laser_pwr ) / decelerate_steps;
 
       #if ENABLED(DEBUG_LASER_TRAP)
         SERIAL_ECHO_MSG("lp:",block->laser.power);
@@ -862,8 +862,8 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
         SERIAL_ECHO_MSG("p.trap:",block->laser.trap_ramp_active_pwr);      
         SERIAL_ECHO_MSG("p.incr:",block->laser.trap_ramp_entry_incr);
         SERIAL_ECHO_MSG("p.decr:",block->laser.trap_ramp_exit_decr);
-      #endif  
-    }
+      #endif
+    }  
   }
   #endif  
 

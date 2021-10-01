@@ -2218,9 +2218,10 @@ uint32_t Stepper::block_phase_isr() {
 
       #if ENABLED(LASER_FEATURE)
         if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {           // Planner controls the laser
-        const power_status_t stat = current_block->laser.status;
-          #if ENABLED(LASER_POWER_TRAP)                               
-          if (!stat.isPowered) cutter.apply_power(0);
+          const power_status_t stat = current_block->laser.status;
+          #if ENABLED(LASER_POWER_TRAP)
+            TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("InitTrapPwr:",current_block->laser.trap_ramp_active_pwr));                               
+            cutter.apply_power(stat.isPowered ? current_block->laser.trap_ramp_active_pwr : 0);
           #else
             if (stat.isEnabled) {
                 TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:",current_block->laser.power));

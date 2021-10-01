@@ -32,11 +32,12 @@
  * Laser:
  *  M3 - Laser ON/Power (Ramped power)
  *  M4 - Laser ON/Power (Ramped power)
- *  M3 I enables continuous inline power and it is processed by the planner. Move blocks are
+ *  M3I enables continuous inline power and it is processed by the planner. Move blocks are
  *  calculated and each block power buffer value is set there. The Stepper ISR then processes the blocks inline.
  *  Within inline mode M3 S-Values will set the power for the next moves e.g. G1 X10 Y10 powers on with the last S-Value
- *  M4 I sets dynamic mode which takes the currently set feedrate and calculates a laser power OCR value
- *  M5 I clears inline mode and set power to 0
+ *  M3I must be already set when using planner synced M3 inline S-Values (LASER_POWER_SYNC)   
+ *  M4I sets dynamic mode which takes the currently set feedrate and calculates a laser power OCR value
+ *  M5I clears inline mode and set power to 0
  *  M5 sets the power output to 0 but leaves inline mode on.
  *
  * Spindle:
@@ -94,24 +95,24 @@ void GcodeSuite::M3_M4(const bool is_M4) {
     }
     else if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
       cutter.unitPower = cutter.cpwr_to_upwr(SPEED_POWER_STARTUP);
-
     return cutter.unitPower;
   };
 
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS || cutter.cutter_mode == CUTTER_MODE_DYNAMIC) {  // Laser power in inline mode
     #if ENABLED(LASER_FEATURE)
-      planner.laser_inline.status.isPowered = true;                                                   // M3 or M4 is powered either way
+      planner.laser_inline.status.isPowered = true;                                                 // M3 or M4 is powered either way
       #if ENABLED(LASER_POWER_SYNC)
         // With power sync we only set power so it does not effect already queued inline power settings
         get_s_power();                                                                              // Update cutter.power if seen
-        planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                            // Send the flag, queueing cutter.power  
+        planner.laser_inline.power = cutter.power;
+        planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                            // Send the flag, queueing inline power
       #else
         TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:get"));
         planner.synchronize();
         cutter.set_enabled(true);
         cutter.inline_power(cutter.upower_to_ocr(get_s_power()));
       #endif
-    #endif    
+    #endif
   }
   else {
     cutter.set_enabled(true);

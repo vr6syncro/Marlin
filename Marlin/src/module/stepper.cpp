@@ -1888,10 +1888,12 @@ uint32_t Stepper::block_phase_isr() {
         // Update laser - Accelerating
         #if ENABLED(LASER_POWER_TRAP)
           if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-            if (planner.laser_inline.status.isPowered) {
-              TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("ATrapPwr:",current_block->laser.trap_ramp_active_pwr));   
-              cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
-              current_block->laser.trap_ramp_active_pwr += current_block->laser.trap_ramp_entry_incr;
+            if (planner.laser_inline.status.isPowered && planner.laser_inline.status.isEnabled) {
+              if (current_block->laser.trap_ramp_entry_incr > 0) {
+                TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("ATrapPwr:",current_block->laser.trap_ramp_active_pwr));   
+                cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
+                current_block->laser.trap_ramp_active_pwr += current_block->laser.trap_ramp_entry_incr;
+              }
             }
           }  
         #endif
@@ -1947,10 +1949,12 @@ uint32_t Stepper::block_phase_isr() {
         // Update laser - Decelerating
         #if ENABLED(LASER_POWER_TRAP)
           if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-            if (planner.laser_inline.status.isPowered) {
-              current_block->laser.trap_ramp_active_pwr -= current_block->laser.trap_ramp_exit_decr;
-              TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("DTrapPwr:",current_block->laser.trap_ramp_active_pwr));
-              cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
+            if (planner.laser_inline.status.isPowered && planner.laser_inline.status.isEnabled) {
+              if (current_block->laser.trap_ramp_exit_decr > 0) {
+                current_block->laser.trap_ramp_active_pwr -= current_block->laser.trap_ramp_exit_decr;
+                TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("DTrapPwr:",current_block->laser.trap_ramp_active_pwr));
+                cutter.apply_power(current_block->laser.trap_ramp_active_pwr);
+              }
             }
           }  
         #endif 
@@ -1977,7 +1981,7 @@ uint32_t Stepper::block_phase_isr() {
       #if ENABLED(LASER_POWER_TRAP)
         if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
           if (step_events_completed + 1 == accelerate_until) {
-            if (planner.laser_inline.status.isPowered) {
+            if (planner.laser_inline.status.isPowered && planner.laser_inline.status.isEnabled) {
               TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("CTrapPwr:",current_block->laser.power));   
               cutter.apply_power(current_block->laser.power);
             }
@@ -2032,7 +2036,11 @@ uint32_t Stepper::block_phase_isr() {
           is_sync_pwr = TEST(current_block->flag, BLOCK_BIT_LASER_PWR);
           if (is_sync_pwr) {
             TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("SyncPwr:", current_block->laser.power));
-            cutter.apply_power(current_block->laser.power);
+            #if ENABLED(LASER_POWER_TRAP)
+              cutter.apply_power(current_block->laser.status.isPowered ? current_block->laser.trap_ramp_active_pwr : 0);
+            #else    
+              cutter.apply_power(current_block->laser.status.isPowered ? current_block->laser.power : 0);
+            #endif
           }
         }
         #endif
@@ -2218,16 +2226,15 @@ uint32_t Stepper::block_phase_isr() {
 
       #if ENABLED(LASER_FEATURE)
         if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {           // Planner controls the laser
-          const power_status_t stat = current_block->laser.status;
+          if (current_block->laser.status.isEnabled) {
           #if ENABLED(LASER_POWER_TRAP)
             TERN_(DEBUG_LASER_TRAP, SERIAL_ECHO_MSG("InitTrapPwr:",current_block->laser.trap_ramp_active_pwr));                               
-            cutter.apply_power(stat.isPowered ? current_block->laser.trap_ramp_active_pwr : 0);
+            cutter.apply_power(current_block->laser.status.isPowered ? current_block->laser.trap_ramp_active_pwr : 0);
           #else
-            if (stat.isEnabled) {
-                TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:",current_block->laser.power));
-                cutter.apply_power(stat.isPowered ? current_block->laser.power : 0);
-            }
-          #endif 
+            TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:",current_block->laser.power));
+            cutter.apply_power(current_block->laser.status.isPowered ? current_block->laser.power : 0);
+          #endif
+          }           
         }
       #endif // LASER_FEATURE
 

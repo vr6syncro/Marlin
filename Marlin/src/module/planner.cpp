@@ -849,7 +849,7 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
 
   #if ENABLED(LASER_POWER_TRAP)
   if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
-    if (planner.laser_inline.status.isPowered) { 
+    if (planner.laser_inline.status.isPowered && planner.laser_inline.status.isEnabled) { 
       block->laser.trap_ramp_active_pwr = (block->laser.power - laser_power_floor) * (initial_rate / float(block->nominal_rate)) + laser_power_floor;
       block->laser.trap_ramp_entry_incr = (block->laser.power - block->laser.trap_ramp_active_pwr) / accelerate_steps;
       float laser_pwr = block->laser.power * (final_rate / float(block->nominal_rate));
@@ -2852,10 +2852,7 @@ void Planner::buffer_sync_block(uint8_t sync_flag) {
     FANS_LOOP(i) block->fan_speed[i] = thermalManager.fan_speed[i];
   #endif
 
-  #if ENABLED(LASER_POWER_SYNC)
-    laser_inline.power = cutter.power;
-    block->laser.power = laser_inline.power;
-  #endif
+  TERN_(LASER_POWER_SYNC, block->laser.power = laser_inline.power);
 
   // If this is the first added movement, reload the delay, otherwise, cancel it.
   if (block_buffer_head == block_buffer_tail) {

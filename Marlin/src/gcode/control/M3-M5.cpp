@@ -88,7 +88,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       #if ENABLED(LASER_POWER_TRAP)
         cutter.unitPower = parser.value_float();
       #else
-        cutter.unitPower = cutter.power_to_range(parser.value_float())
+        cutter.unitPower = cutter.power_to_range(parser.value_float());
       #endif
       // PWM implied and ranges from S0 to S180 for a positional servo. Typical use would be a pen up/down function.
       #if ENABLED(SPINDLE_SERVO)

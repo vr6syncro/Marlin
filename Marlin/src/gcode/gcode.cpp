@@ -223,7 +223,7 @@ void GcodeSuite::get_destination_from_command() {
           #if ENABLED(LASER_POWER_TRAP)
             cutter.unitPower = parser.value_float();
           #else
-            cutter.unitPower = cutter.power_to_range(parser.value_float())
+            cutter.unitPower = cutter.power_to_range(parser.value_float());
           #endif
           cutter.inline_power(cutter.upower_to_ocr(cutter.unitPower));
           cutter.menuPower = cutter.unitPower;

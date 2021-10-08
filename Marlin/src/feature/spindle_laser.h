@@ -145,7 +145,7 @@ public:
     static inline uint8_t upower_to_ocr(const cutter_power_t upwr) {
       return uint8_t(
         #if CUTTER_UNIT_IS(PWM255)
-          upwr
+          upwr 
         #elif CUTTER_UNIT_IS(PERCENT)
           pct_to_ocr(upwr)
         #else

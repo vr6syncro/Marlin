@@ -81,7 +81,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       cutter.inline_power(0);
       cutter.set_enabled(true);
     }
-  #endif  
+  #endif
 
   auto get_s_power = [] {
     if (parser.seen('S')) {
@@ -105,7 +105,7 @@ void GcodeSuite::M3_M4(const bool is_M4) {
       planner.laser_inline.status.isPowered = true;                                                 // M3 or M4 is powered either way
       get_s_power();                                                                                // Update cutter.power if seen
       #if ENABLED(LASER_POWER_SYNC)
-        // With power sync we only set power so it does not effect already queued inline power setting                                                                  
+        // With power sync we only set power so it does not effect already queued inline power setting
         planner.buffer_sync_block(BLOCK_FLAG_LASER_PWR);                                            // Send the flag, queueing inline power
       #else
         TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("InlinePwr:get"));
@@ -135,7 +135,7 @@ void GcodeSuite::M5() {
   cutter.power = 0;
   TERN_(DEBUG_CUTTER_POWER, SERIAL_ECHO_MSG("M5Pwr:",cutter.power));
   cutter.apply_power(cutter.power);             // M5 kills power in either mode but if it's in inline it will be still be the active mode.
-  if (cutter.cutter_mode != CUTTER_MODE_STANDARD) {   
+  if (cutter.cutter_mode != CUTTER_MODE_STANDARD) {
     if (parser.seen('I')) {
       TERN_(LASER_FEATURE, cutter.inline_power(cutter.power));
       cutter.set_enabled(false);                  // Needs to happen while we are in inline mode to clear inline power.

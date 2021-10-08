@@ -862,12 +862,12 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
           SERIAL_ECHO_MSG("lp:",block->laser.power);
           SERIAL_ECHO_MSG("as:",accelerate_steps);
           SERIAL_ECHO_MSG("ds:",decelerate_steps);
-          SERIAL_ECHO_MSG("p.trap:",block->laser.trap_ramp_active_pwr);      
+          SERIAL_ECHO_MSG("p.trap:",block->laser.trap_ramp_active_pwr);
           SERIAL_ECHO_MSG("p.incr:",block->laser.trap_ramp_entry_incr);
           SERIAL_ECHO_MSG("p.decr:",block->laser.trap_ramp_exit_decr);
         #endif
       } else {
-        block->laser.trap_ramp_active_pwr = 0;      
+        block->laser.trap_ramp_active_pwr = 0;
         block->laser.trap_ramp_entry_incr = 0;
         block->laser.trap_ramp_exit_decr = 0;
       }

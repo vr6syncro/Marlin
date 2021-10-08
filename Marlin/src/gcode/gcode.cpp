@@ -219,7 +219,7 @@ void GcodeSuite::get_destination_from_command() {
       cutter.last_feedrate_mm_m = 0;
       if (WITHIN(parser.codenum, 1, TERN(ARC_SUPPORT, 3, 1)) || TERN0(BEZIER_CURVE_SUPPORT, parser.codenum == 5)) {
         planner.laser_inline.status.isPowered = true;
-        if (parser.seen('I')) cutter.set_enabled(true);       // This is set for backward LightBurn compatibility. 
+        if (parser.seen('I')) cutter.set_enabled(true);       // This is set for backward LightBurn compatibility.
         if (parser.seen('S')) {
           #if ENABLED(LASER_POWER_TRAP)
             cutter.unitPower = parser.value_float();

@@ -445,6 +445,16 @@
   #error "SPINDLE_LASER_ACTIVE_HIGH is now SPINDLE_LASER_ACTIVE_STATE."
 #elif defined(SPINDLE_LASER_ENABLE_INVERT)
   #error "SPINDLE_LASER_ENABLE_INVERT is now SPINDLE_LASER_ACTIVE_STATE."
+#elif defined(LASER_POWER_INLINE)
+  #error "LASER_POWER_INLINE is not required, inline mode is enabled via GCODE M3I and disabled with M5I"
+#elif defined(LASER_POWER_INLINE_TRAPEZOID)
+  #error "LASER_POWER_INLINE_TRAPEZOID is now LASER_POWER_TRAP."
+#elif defined(LASER_POWER_INLINE_TRAPEZOID_CONT)
+  #error "LASER_POWER_INLINE_TRAPEZOID_CONT is replaced with LASER_POWER_TRAP."
+#elif defined(LASER_POWER_INLINE_TRAPEZOID_PER)
+  #error "LASER_POWER_INLINE_TRAPEZOID_CONT_PER  replaced with LASER_POWER_TRAP."
+#elif defined(LASER_POWER_INLINE_CONTINUOUS)
+  #error "LASER_POWER_INLINE_CONTINUOUS is not required, inline mode is enabled via GCODE M3I and disabled with M5I"    
 #elif defined(CUTTER_POWER_DISPLAY)
   #error "CUTTER_POWER_DISPLAY is now CUTTER_POWER_UNIT."
 #elif defined(CHAMBER_HEATER_PIN)
@@ -3548,25 +3558,20 @@ static_assert(_PLUS_TEST(4), "HOMING_FEEDRATE_MM_M values must be positive.");
   #endif
 
   #if ENABLED(LASER_FEATURE)
-    //#if ENABLED(SPINDLE_CHANGE_DIR)
-    //  #error "SPINDLE_CHANGE_DIR and LASER_POWER_INLINE are incompatible."
-    // Discussion - G0 and G28 should never allow laser power!
-    //#elif ENABLED(LASER_MOVE_G0_OFF) && DISABLED(LASER_MOVE_POWER)
-    //  #error "LASER_MOVE_G0_OFF requires LASER_MOVE_POWER."
-    //#endif
-    // Discussion - Does anyone expect DYNAMIC mode to work wihtout PWM? Thus do we need to say it?
-    //#if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-      //#if DISABLED(SPINDLE_LASER_USE_PWM)
-        //#error "LASER_POWER_INLINE_TRAPEZOID requires SPINDLE_LASER_USE_PWM to function."
-      //#elif ENABLED(S_CURVE_ACCELERATION)
-      #if ENABLED(S_CURVE_ACCELERATION)
-        // Discussion MAY result in unintended behavior, well does it or not and what should be the norm?
-        //#ifndef LASER_POWER_INLINE_S_CURVE_ACCELERATION_WARN
-        //  #define LASER_POWER_INLINE_S_CURVE_ACCELERATION_WARN
-        //  #warning "Combining LASER_POWER_INLINE_TRAPEZOID with S_CURVE_ACCELERATION may result in unintended behavior."
-        //#endif
-      #endif
-    //#endif
+    #if ENABLED(SPINDLE_CHANGE_DIR)
+      #error "SPINDLE_CHANGE_DIR and LASER_FEATURE are incompatible."
+    #elif ENABLED(LASER_MOVE_G0_OFF)
+      #error "LASER_MOVE_G0_OFF is no longer required, G0 and G28 cannot apply power"
+    #elif ENABLED(LASER_MOVE_G28_OFF)
+      #error "LASER_MOVE_G0_OFF is no longer required, G0 and G28 cannot apply power"
+    #elif ENABLED(LASER_MOVE_POWER)
+      #error "LASER_MOVE_POWER is no longer applicable."
+    #endif
+    #if ENABLED(LASER_POWER_TRAP)
+      #if DISABLED(SPINDLE_LASER_USE_PWM)
+        #error "LASER_POWER_TRAP requires SPINDLE_LASER_USE_PWM to function."
+      #endif  
+    #endif
   #else
     #if SPINDLE_LASER_POWERUP_DELAY < 1
       #error "SPINDLE_LASER_POWERUP_DELAY must be greater than 0."

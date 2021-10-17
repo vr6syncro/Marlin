@@ -209,10 +209,10 @@
 #endif // BTT_MOTOR_EXPANSION
 
 // Laser K40 Pin description
-#define SPINDLE_DIR_PIN             -1              // disabled, unused
+#define SPINDLE_DIR_PIN          -1              // disabled, unused
 #define SPINDLE_LASER_ENA_PIN    NEOPIXEL_PIN      // P1_24, logic level converter maybe necessary, active low
 #define SPINDLE_LASER_PWM_PIN    SERVO0_PIN       // P2_00, to K40 PWM Pin
-#define COOLANT_FLOOD_PIN        FAN_PIN         // radiator fan, 24V
-#define COOLANT_MIST_PIN         HEATER_0_PIN   // waterpump or relay, 24V
-#define AIR_EVACUATION_PIN       HEATER_BED_PIN        // attached a airassist with M10 for on and M11 for off
-#define AIR_ASSIST_PIN            -1
+#define COOLANT_FLOOD_PIN        -1         // radiator fan, 24V
+#define COOLANT_MIST_PIN         -1   // waterpump or relay, 24V
+#define AIR_EVACUATION_PIN       -1        
+#define AIR_ASSIST_PIN           HEATER_BED_PIN // attached a airassist with M8 for on and M9 for off

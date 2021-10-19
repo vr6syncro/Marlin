@@ -1639,9 +1639,10 @@ void Temperature::manage_heater() {
   #if ENABLED(LASER_COOLANT_FLOW_METER)
     cooler.flowmeter_task(ms);
     #if ENABLED(FLOWMETER_SAFETY)
-      if (cutter.enabled() && cooler.check_flow_too_low()) {
+      if (cooler.check_flow_too_low()) {
+        if (cutter.enabled()) TERN_(HAS_DISPLAY, ui.flow_fault());
         cutter.disable();
-        TERN_(HAS_DISPLAY, ui.flow_fault());
+        cutter.cutter_mode = CUTTER_MODE_ERROR;   // Immediately kill stepper inline power output
       }
     #endif
   #endif
@@ -2207,22 +2208,22 @@ void Temperature::init() {
 
   // Thermistor activation by MCU pin
   #if PIN_EXISTS(TEMP_0_TR_ENABLE)
-    OUT_WRITE(TEMP_0_TR_ENABLE_PIN, (
+    OUT_WRITE(TEMP_0_TR_ENABLE_PIN,
       #if TEMP_SENSOR_IS_ANY_MAX_TC(0)
-        HIGH
+        1
       #else
-        LOW
+        0
       #endif
-    ));
+    );
   #endif
   #if PIN_EXISTS(TEMP_1_TR_ENABLE)
-    OUT_WRITE(TEMP_1_TR_ENABLE_PIN, (
+    OUT_WRITE(TEMP_1_TR_ENABLE_PIN,
       #if TEMP_SENSOR_IS_ANY_MAX_TC(1)
-        HIGH
+        1
       #else
-        LOW
+        0
       #endif
-    ));
+    );
   #endif
 
   #if HAS_HEATER_0

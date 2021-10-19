@@ -27,7 +27,6 @@
 #include "../gcode.h"
 #include "../../module/planner.h"
 #include "../../module/printcounter.h"
-#include "../../module/temperature.h"
 #include "../../sd/cardreader.h"
 
 #ifdef SD_FINISHED_RELEASECOMMAND

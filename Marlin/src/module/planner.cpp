@@ -132,8 +132,9 @@ uint8_t Planner::delay_before_delivering;       // This counter delays delivery 
 
 planner_settings_t Planner::settings;           // Initialized by settings.load()
 
-#if ENABLED(LASER_POWER_INLINE)
+#if ENABLED(LASER_FEATURE)
   laser_state_t Planner::laser_inline;          // Current state for blocks
+  const uint8_t laser_power_floor = cutter.pct_to_ocr(SPEED_POWER_MIN); 
 #endif
 
 uint32_t Planner::max_acceleration_steps_per_s2[DISTINCT_AXES]; // (steps/s^2) Derived from mm_per_s2
@@ -826,7 +827,7 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
 
   // Store new block parameters
   block->accelerate_until = accelerate_steps;
-  block->decelerate_after = accelerate_steps + plateau_steps;
+  block->decelerate_after = decelerate_steps + plateau_steps;
   block->initial_rate = initial_rate;
   #if ENABLED(S_CURVE_ACCELERATION)
     block->acceleration_time = acceleration_time;
@@ -840,43 +841,40 @@ void Planner::calculate_trapezoid_for_block(block_t * const block, const_float_t
   /**
    * Laser trapezoid calculations
    *
-   * Approximate the trapezoid with the laser, incrementing the power every `entry_per` while accelerating
-   * and decrementing it every `exit_power_per` while decelerating, thus ensuring power is related to feedrate.
+   * Approximate the trapezoid with the laser, incrementing the power every `trap_ramp_entry_incr` while accelerating
+   * and decrementing it every `trap_ramp_exit_decr` while decelerating, thus ensuring power is related to feedrate.
    *
-   * LASER_POWER_INLINE_TRAPEZOID_CONT doesn't need this as it continuously approximates
-   *
-   * Note this may behave unreliably when running with S_CURVE_ACCELERATION
+   * Note this may behave unreliably when running with S_CURVE_ACCELERATION TBD until testing is complete
    */
-  #if ENABLED(LASER_POWER_INLINE_TRAPEZOID)
-    if (block->laser.power > 0) { // No need to care if power == 0
-      const uint8_t entry_power = block->laser.power * entry_factor; // Power on block entry
-      #if DISABLED(LASER_POWER_INLINE_TRAPEZOID_CONT)
-        // Speedup power
-        const uint8_t entry_power_diff = block->laser.power - entry_power;
-        if (entry_power_diff) {
-          block->laser.entry_per = accelerate_steps / entry_power_diff;
-          block->laser.power_entry = entry_power;
-        }
-        else {
-          block->laser.entry_per = 0;
-          block->laser.power_entry = block->laser.power;
-        }
-        // Slowdown power
-        const uint8_t exit_power = block->laser.power * exit_factor, // Power on block entry
-                      exit_power_diff = block->laser.power - exit_power;
-        if (exit_power_diff) {
-          block->laser.exit_per = (block->step_event_count - block->decelerate_after) / exit_power_diff;
-          block->laser.power_exit = exit_power;
-        }
-        else {
-          block->laser.exit_per = 0;
-          block->laser.power_exit = block->laser.power;
-        }
-      #else
-        block->laser.power_entry = entry_power;
-      #endif
-    }
-  #endif
+
+#if ENABLED(LASER_POWER_TRAP)
+  if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
+    if (planner.laser_inline.status.isPowered && planner.laser_inline.status.isEnabled) { 
+      if (block->laser.power > 0) {
+        NOLESS(block->laser.power, laser_power_floor); 
+        block->laser.trap_ramp_active_pwr = (block->laser.power - laser_power_floor) * (initial_rate / float(block->nominal_rate)) + laser_power_floor;
+        block->laser.trap_ramp_entry_incr = (block->laser.power - block->laser.trap_ramp_active_pwr) / accelerate_steps;
+        float laser_pwr = block->laser.power * (final_rate / float(block->nominal_rate));
+        NOLESS(laser_pwr, laser_power_floor);
+        block->laser.trap_ramp_exit_decr = (block->laser.power - laser_pwr) / decelerate_steps;
+
+        #if ENABLED(DEBUG_LASER_TRAP)
+          SERIAL_ECHO_MSG("lp:",block->laser.power);
+          SERIAL_ECHO_MSG("as:",accelerate_steps);
+          SERIAL_ECHO_MSG("ds:",decelerate_steps);
+          SERIAL_ECHO_MSG("p.trap:",block->laser.trap_ramp_active_pwr);
+          SERIAL_ECHO_MSG("p.incr:",block->laser.trap_ramp_entry_incr);
+          SERIAL_ECHO_MSG("p.decr:",block->laser.trap_ramp_exit_decr);
+        #endif
+      } else {
+        block->laser.trap_ramp_active_pwr = 0;
+        block->laser.trap_ramp_entry_incr = 0;
+        block->laser.trap_ramp_exit_decr = 0;
+      }
+
+    }  
+  }
+  #endif  
 }
 
 /*                            PLANNER SPEED DEFINITION
@@ -1306,7 +1304,7 @@ void Planner::recalculate() {
 #endif // HAS_FAN
 
 /**
- * Maintain fans, paste extruder pressure,
+ * Maintain fans, paste extruder pressure, spindle/laser power
  */
 void Planner::check_axes_activity() {
 
@@ -1359,8 +1357,8 @@ void Planner::check_axes_activity() {
   }
   else {
 
-    TERN_(HAS_CUTTER, cutter.refresh());
-
+    TERN_(HAS_CUTTER, if (cutter.cutter_mode == CUTTER_MODE_STANDARD) cutter.refresh());
+    
     #if HAS_TAIL_FAN_SPEED
       FANS_LOOP(i) tail_fan_speed[i] = thermalManager.scaledFanSpeed(i);
     #endif
@@ -1977,10 +1975,19 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
   block->direction_bits = dm;
 
   // Update block laser power
-  #if ENABLED(LASER_POWER_INLINE)
-    laser_inline.status.isPlanned = true;
-    block->laser.status = laser_inline.status;
-    block->laser.power = laser_inline.power;
+  #if HAS_CUTTER
+    if (cutter.cutter_mode == CUTTER_MODE_STANDARD)
+      block->cutter_power = cutter.power;
+  #endif
+
+  #if ENABLED(LASER_FEATURE)
+    if (cutter.cutter_mode == CUTTER_MODE_CONTINUOUS) {
+      block->laser.power = laser_inline.power;
+      block->laser.status = laser_inline.status;
+    } else if (cutter.cutter_mode == CUTTER_MODE_DYNAMIC && cutter.laser_feedrate_changed()) { // Only process changes in rate
+      laser_inline.power = cutter.calc_dynamic_power();
+      block->laser.power = laser_inline.power;
+    } 
   #endif
 
   // Number of steps for each axis
@@ -2133,7 +2140,6 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
 
   TERN_(MIXING_EXTRUDER, mixer.populate_block(block->b_color));
 
-  TERN_(HAS_CUTTER, block->cutter_power = cutter.power);
 
   #if HAS_FAN
     FANS_LOOP(i) block->fan_speed[i] = thermalManager.fan_speed[i];
@@ -2824,15 +2830,20 @@ bool Planner::_populate_block(block_t * const block, bool split_move,
 
 } // _populate_block()
 
+
+void Planner::buffer_sync_block() {
+    constexpr uint8_t sync_flag = BLOCK_FLAG_SYNC_POSITION;
+  buffer_sync_block(sync_flag);
+}
+
 /**
  * Planner::buffer_sync_block
- * Add a block to the buffer that just updates the position,
- * or in case of LASER_SYNCHRONOUS_M106_M107 the fan PWM
+ * Add a block to the buffer that just updates the position
+ * @param sync_flag BLOCK_FLAG_SYNC_FANS & BLOCK_FLAG_LASER_PWR 
+ * Support LASER_SYNCHRONOUS_M106_M107 and LASER_POWER_SYNC
+ * power sync block buffer queueing.   
  */
-void Planner::buffer_sync_block(TERN_(LASER_SYNCHRONOUS_M106_M107, uint8_t sync_flag)) {
-  #if DISABLED(LASER_SYNCHRONOUS_M106_M107)
-    constexpr uint8_t sync_flag = BLOCK_FLAG_SYNC_POSITION;
-  #endif
+void Planner::buffer_sync_block(uint8_t sync_flag) {
 
   // Wait for the next available block
   uint8_t next_buffer_head;
@@ -2848,6 +2859,8 @@ void Planner::buffer_sync_block(TERN_(LASER_SYNCHRONOUS_M106_M107, uint8_t sync_
   #if BOTH(HAS_FAN, LASER_SYNCHRONOUS_M106_M107)
     FANS_LOOP(i) block->fan_speed[i] = thermalManager.fan_speed[i];
   #endif
+
+  TERN_(LASER_POWER_SYNC, block->laser.power = cutter.power);
 
   // If this is the first added movement, reload the delay, otherwise, cancel it.
   if (block_buffer_head == block_buffer_tail) {
